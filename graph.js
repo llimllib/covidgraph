@@ -1,10 +1,12 @@
 // TODO y axis label
 // TODO source link (data and code)
-// TODO figure out how to preventDefault
 // TODO hover
-// TODO don't allow selecting regions already graphed
 // TODO China and the US are not available in this data as totals. Maybe write
 // a post-download-processing script?
+// TODO: better starting point? Feb 21 is pretty arbitrarily chosen as the date
+// Italy passed 20 cases
+// TODO: separate out capita
+// TODO: make removing Italy work
 capita = {
   Italy: 60317546,
   China: 1427647786,
@@ -141,7 +143,6 @@ fetchData = async () => {
 };
 
 graph = async => {
-  // TODO: better starting point? This is pretty arbitrarily chosen
   const startdt = new Date(2020, 1, 21);
   const data = covidData.filter(
     d => activeRegions.indexOf(d.displayName) != -1
@@ -220,7 +221,7 @@ graph = async => {
   // example to follow: https://observablehq.com/@d3/index-chart
   svg
     .selectAll("path")
-    .data(data.map(d => d.values))
+    .data(data.map(d => d.values), d => d)
     .join("path")
     .attr("fill", "none")
     .attr("stroke", (d, i) => d3.schemeCategory10[i])
@@ -267,51 +268,41 @@ graph = async => {
     .text(d => d);
 };
 
-// XXX: I don't _really_ get why we get a row here even though I set the key
-// function on .data to use displayName :shrug:
-addHandler = row => {
+addHandler = name => {
   d3.event.preventDefault();
 
-  // don't add the row if it's already present (do something better? Maybe the
-  // selectable regions shouldn't include ones in the graph already.
-  if (activeRegions.indexOf(row.displayName) == -1) {
-    activeRegions.push(row.displayName);
-  }
+  activeRegions.push(name);
   buildTable();
   graph();
 };
 
 removeHandler = name => {
   d3.event.preventDefault();
+
   activeRegions = activeRegions.filter(x => x != name);
   buildTable();
   graph();
 };
 
 buildTable = async => {
+  inactiveRegions = covidData
+    .map(d => d.displayName)
+    .filter(d => activeRegions.indexOf(d) == -1);
+
   d3.select("#allRegions ul")
     .selectAll("li.region")
-    .data(covidData, d => d.displayName)
+    .data(inactiveRegions, d => d)
     .join("li")
     .attr("class", "region")
     .on("click", addHandler)
-    .html(
-      d =>
-        `<a href="#" class="add" data-name="${d.displayName}">${d.displayName} >></a>`
-    );
+    .html(d => `<a href="#" class="add" data-name="${d}">${d} >></a>`);
 
   d3.select("#selectedRegions ul")
     .selectAll("li.activeRegion")
     .data(activeRegions, d => d)
-    .join(
-      enter =>
-        enter
-          .append("li")
-          .attr("class", "activeRegion")
-          .on("click", removeHandler),
-      update => update,
-      exit => exit.remove()
-    )
+    .join("li")
+    .attr("class", "activeRegion")
+    .on("click", removeHandler)
     .html(d => `<a href="#" class="rem" data-name="${d}">${d} <<</a>`);
 };
 
