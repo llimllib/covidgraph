@@ -83,9 +83,14 @@ graph = async () => {
     // For now, let's just filter to Italy, California, New York, CT and Maine
     if (
       ["Italy", "Korea, South"].indexOf(row["Country/Region"]) == -1 &&
-      ["California", "Maine", "New York", "Connecticut", "Florida"].indexOf(
-        row["Province/State"]
-      ) == -1
+      [
+        "California",
+        "Maine",
+        "New York",
+        "Connecticut",
+        "Washington",
+        "New Jersey"
+      ].indexOf(row["Province/State"]) == -1
     ) {
       return;
     }
