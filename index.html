@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+	<head>
+        <link rel="stylesheet" href="../static/tufte.css"/>
+		<meta charset="UTF-8">
+		<title>US Covid</title>
+<style>
+table {
+  table-layout: fixed;
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+  /* border-collapse: collapse; */
+}
+
+.row-min {
+  width: 8%;
+}
+
+button {
+  font-size: 15px;
+  font-family: Palatino, "Palatino Linotype", "Palatino LT STD", "Book Antiqua", Georgia, serif;
+}
+
+th {
+  text-align: left;
+  padding: 0.5em;
+  text-decoration: underline;
+}
+
+td {
+  /* border: 1px solid rgba(128, 128, 128, 0.5); */
+  padding: 0.5em;
+}
+
+#title {
+  perspective: 1000px;
+}
+
+#corgi {
+  transform-style: preserve-3d;
+  transform-origin: bottom center;
+}
+
+#corgi:hover {
+  animation: 0.3s ease-in-out booty-shake infinite;
+}
+
+@keyframes booty-shake {
+  25% {
+    transform: translateX(5px) rotateY(15deg);
+  }
+  75% {
+    transform: translateX(-5px) rotateY(-15deg);
+  }
+}
+</style>
+<script src="https://d3js.org/d3.v5.js"></script>
+<script src="graph.js"></script>
+<body>
+  <article>
+    <h1>Covid, I dunno</h1>
+    <div id="graph">
+    </div>
+  </article>
+</body>
+</html>
