@@ -94,27 +94,11 @@ capita = {
   "South Korea": 51709098
 };
 
-graph = async () => {
-  let mindt = new Date(9999999999999);
-  let maxdt = new Date(0);
-  let maxval = 0;
-  const startdt = new Date(2020, 1, 21);
-  const data = await d3.csv("./time_series_19-covid-Confirmed.csv", row => {
-    // For now, let's just filter to Italy, California, New York, CT and Maine
-    if (
-      ["Italy", "Korea, South"].indexOf(row["Country/Region"]) == -1 &&
-      [
-        "California",
-        "Maine",
-        "New York",
-        "Connecticut",
-        "Washington",
-        "New Jersey"
-      ].indexOf(row["Province/State"]) == -1
-    ) {
-      return;
-    }
+// intentionally global. Let's let users play with it in the console if they want
+covidData = undefined;
 
+fetchData = async () => {
+  covidData = await d3.csv("./time_series_19-covid-Confirmed.csv", row => {
     if (row["Country/Region"] == "Korea, South") {
       row["Country/Region"] = "South Korea";
     }
@@ -131,6 +115,11 @@ graph = async () => {
 
         const name = row["Province/State"] || row["Country/Region"];
         row.name = name;
+        if (row["Province/State"]) {
+          row.displayName = `${row["Province/State"]}, ${
+            row["Country/Region"]
+          }`;
+        }
 
         // convert each field to a number
         row[prop] = +row[prop];
@@ -142,23 +131,8 @@ graph = async () => {
         if (parts.length == 3) {
           dt = new Date(+("20" + parts[2]), +parts[0] - 1, +parts[1]);
 
-          // The virus didn't start to pick up in Italy until Feb 21, so
-          // eliminate dates before that
-          if (dt < startdt) {
-            continue;
-          }
-
-          if (dt < mindt) {
-            mindt = dt;
-          } else if (dt > maxdt) {
-            maxdt = dt;
-          }
-
           // We're going to graph the reported incidences per 10k people
           const percapita = (row[prop] / capita[name]) * 10000;
-          if (percapita > maxval) {
-            maxval = percapita;
-          }
           values.push({
             dt: dt,
             value: percapita
@@ -166,9 +140,21 @@ graph = async () => {
         }
       }
     }
+
+    // attach the values array to the row
     row.values = values;
     return row;
   });
+};
+
+// regions is a list of regions to graph. the region names must match a
+// covidData.name exactly
+graph = async regions => {
+  // TODO: better starting point? This is pretty arbitrarily chosen
+  const startdt = new Date(2020, 1, 21);
+  const data = covidData.filter(d => regions.indexOf(d.name) != -1);
+  const maxdt = d3.max(data[0].values, d => d.dt);
+  const maxval = d3.max(data, row => d3.max(row.values.map(d => d.value)));
 
   console.log(data);
 
@@ -188,7 +174,7 @@ graph = async () => {
   // Add X axis: the date
   const x = d3
     .scaleTime()
-    .domain([mindt, maxdt])
+    .domain([startdt, maxdt])
     .range([0, width]);
   svg
     .append("g")
@@ -259,6 +245,19 @@ graph = async () => {
   });
 };
 
+main = async () => {
+  await fetchData();
+  await graph([
+    "Italy",
+    "South Korea",
+    "California",
+    "Washington",
+    "New York",
+    "New Jersey",
+    "Maine"
+  ]);
+};
+
 window.addEventListener("DOMContentLoaded", evt => {
-  graph();
+  main();
 });
