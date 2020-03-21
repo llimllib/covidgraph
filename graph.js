@@ -70,7 +70,8 @@ capita = {
   "West Virginia": 1851420,
   Wisconsin: 5742117,
   Wyoming: 579679,
-  "Puerto Rico": 3583073
+  "Puerto Rico": 3583073,
+  "South Korea": 51709098
 };
 
 graph = async () => {
@@ -81,12 +82,16 @@ graph = async () => {
   const data = await d3.csv("./time_series_19-covid-Confirmed.csv", row => {
     // For now, let's just filter to Italy, California, New York, CT and Maine
     if (
-      row["Country/Region"] != "Italy" &&
+      ["Italy", "Korea, South"].indexOf(row["Country/Region"]) == -1 &&
       ["California", "Maine", "New York", "Connecticut", "Florida"].indexOf(
         row["Province/State"]
       ) == -1
     ) {
       return;
+    }
+
+    if (row["Country/Region"] == "Korea, South") {
+      row["Country/Region"] = "South Korea";
     }
 
     let values = [];
@@ -154,7 +159,7 @@ graph = async () => {
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
   // Add X axis: the date
-  var x = d3
+  const x = d3
     .scaleTime()
     .domain([mindt, maxdt])
     .range([0, width]);
@@ -171,21 +176,46 @@ graph = async () => {
     .call(g => g.select(".domain").remove());
 
   // Add y axis: the # of confirmed cases
-  var y = d3
+  const y = d3
     .scaleLinear()
     .domain([0, maxval])
     .range([height, 0]);
   svg
     .append("g")
-    .attr("transform", "translate(-10, 0)")
+    .attr("transform", "translate(0, 0)")
     .call(
       d3
-        .axisLeft(y)
+        .axisRight(y)
+        .tickSize(width)
         .ticks(10)
-        .tickSizeOuter(0)
-        .tickSizeInner(0)
     )
-    .call(g => g.select(".domain").remove());
+    // remove the y axis bar
+    .call(g => g.select(".domain").remove())
+    // make the tick lines translucent
+    .call(g =>
+      g.selectAll(".tick:not(:first-of-type) line").attr("stroke-opacity", 0.2)
+    )
+    // move the tick labels to the left
+    .call(g =>
+      g
+        .selectAll(".tick text")
+        .attr("x", 4)
+        .attr("dy", -4)
+    );
+
+  // yAxis = svg => svg
+  //     .attr("transform", `translate(${margin.left},0)`)
+  //     .call(d3.axisRight(y)
+  //         .tickSize(width - margin.left - margin.right)
+  //         .tickFormat(formatTick))
+  //     .call(g => g.select(".domain")
+  //         .remove())
+  //     .call(g => g.selectAll(".tick:not(:first-of-type) line")
+  //         .attr("stroke-opacity", 0.5)
+  //         .attr("stroke-dasharray", "2,2"))
+  //     .call(g => g.selectAll(".tick text")
+  //         .attr("x", 4)
+  //         .attr("dy", -4))
 
   // for every state/nation, create a line
   data.forEach((row, idx) => {

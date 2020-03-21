@@ -37,30 +37,12 @@ td {
 #title {
   perspective: 1000px;
 }
-
-#corgi {
-  transform-style: preserve-3d;
-  transform-origin: bottom center;
-}
-
-#corgi:hover {
-  animation: 0.3s ease-in-out booty-shake infinite;
-}
-
-@keyframes booty-shake {
-  25% {
-    transform: translateX(5px) rotateY(15deg);
-  }
-  75% {
-    transform: translateX(-5px) rotateY(-15deg);
-  }
-}
 </style>
 <script src="https://d3js.org/d3.v5.js"></script>
 <script src="graph.js"></script>
 <body>
   <article>
-    <h1>Covid, I dunno</h1>
+    <h1>Covid Cases per 10k people</h1>
     <div id="graph">
     </div>
   </article>
