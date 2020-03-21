@@ -1,6 +1,8 @@
 //TODO y axis label
 //TODO source link (data and code)
 //TODO figure out how to preventDefault
+//TODO hover
+//TODO don't allow selecting regions already graphed
 
 labels = (svg, colors, names, x, y) => {
   const width = 125;
@@ -195,8 +197,7 @@ graph = async => {
 
   // append the svg object to the body of the page
   const svg = d3
-    .select("#graph")
-    .append("svg")
+    .select("svg#graph")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
     .append("g")
@@ -251,36 +252,34 @@ graph = async => {
   names = data.map(row => row.name);
   labels(svg, d3.schemeCategory10, names, 30, 30);
 
+  const line = d3
+    .line()
+    .x(d => x(d.dt))
+    .y(d => y(d.value));
+
   // for every state/nation, create a line
+  // example to follow: https://observablehq.com/@d3/index-chart
   svg
-    .selectAll(".line")
-    .data(data)
-    .enter()
-    .append("path")
-    .datum(d => d.values)
+    .selectAll("path")
+    .data(data.map(d => d.values))
+    .join("path")
     .attr("fill", "none")
     .attr("stroke", (d, i) => d3.schemeCategory10[i])
     .attr("stroke-width", 1.5)
     .attr("class", "line")
-    .attr(
-      "d",
-      d3
-        .line()
-        .x(function(d) {
-          return x(d.dt);
-        })
-        .y(function(d) {
-          return y(d.value);
-        })
-    );
+    .attr("d", d => line(d));
 };
 
 // XXX: I don't _really_ get why we get a row here even though I set the key
 // function on .data to use displayName :shrug:
 addHandler = row => {
   d3.event.preventDefault();
-  console.log("add name: ", name);
-  activeRegions.push(row.displayName);
+
+  // don't add the row if it's already present (do something better? Maybe the
+  // selectable regions shouldn't include ones in the graph already.
+  if (activeRegions.indexOf(row.displayName) == -1) {
+    activeRegions.push(row.displayName);
+  }
   buildTable();
   graph();
 };
