@@ -1,48 +1,8 @@
-//TODO y axis label
-//TODO source link (data and code)
-//TODO figure out how to preventDefault
-//TODO hover
-//TODO don't allow selecting regions already graphed
-
-labels = (svg, colors, names, x, y) => {
-  const width = 125;
-  const margin = { top: 10, left: 10 };
-  // legend bg
-  svg
-    .append("g")
-    .attr("id", "legend")
-    .append("rect")
-    .attr("x", x)
-    .attr("y", y)
-    .attr("width", width) // todo calculate from label length?
-    .attr("height", names.length * 20 + margin.top)
-    .attr("fill", "white");
-
-  d3.select("#legend")
-    .selectAll(".legendCircle")
-    .data(names)
-    .enter()
-    .append("circle")
-    .attr("cx", x + margin.left)
-    .attr("cy", (d, i) => y + margin.top + 20 * i - 2) // 2 is a fudge factor. Just looks better.
-    .attr("r", 4)
-    .style("fill", (d, i) => colors[i])
-    .attr("class", "legendCircle");
-
-  d3.select("#legend")
-    .selectAll(".legendLabel")
-    .data(names)
-    .enter()
-    .append("text")
-    .attr("x", x + margin.left * 2)
-    .attr("y", (d, i) => y + margin.top + 20 * i)
-    .style("fill", "black")
-    .attr("text-anchor", "left")
-    .attr("alignment-baseline", "middle")
-    .attr("class", "legendLabel")
-    .text(d => d);
-};
-
+// TODO y axis label
+// TODO source link (data and code)
+// TODO figure out how to preventDefault
+// TODO hover
+// TODO don't allow selecting regions already graphed
 // TODO China and the US are not available in this data as totals. Maybe write
 // a post-download-processing script?
 capita = {
@@ -195,7 +155,6 @@ graph = async => {
     width = 800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom;
 
-  // append the svg object to the body of the page
   const svg = d3
     .select("svg#graph")
     .attr("width", width + margin.left + margin.right)
@@ -250,7 +209,7 @@ graph = async => {
     );
 
   names = data.map(row => row.name);
-  labels(svg, d3.schemeCategory10, names, 30, 30);
+  // labels(svg, d3.schemeCategory10, activeRegions, 30, 30);
 
   const line = d3
     .line()
@@ -268,6 +227,44 @@ graph = async => {
     .attr("stroke-width", 1.5)
     .attr("class", "line")
     .attr("d", d => line(d));
+
+  const legendWidth = 125;
+  const legendX = 30;
+  const legendY = 30;
+  const legendMargin = { top: 10, left: 10 };
+  const legend = svg.append("g");
+
+  legend
+    .append("rect")
+    .attr("x", legendX)
+    .attr("y", legendY)
+    .attr("width", legendWidth) // todo calculate from label length?
+    .attr("height", activeRegions.length * 20 + margin.top)
+    .attr("id", "legendBG")
+    .attr("fill", "white");
+
+  const keys = legend
+    .selectAll("g")
+    .data(activeRegions)
+    .join("g");
+
+  keys
+    .append("circle")
+    .attr("cx", legendX + legendMargin.left)
+    .attr("cy", (d, i) => legendY + legendMargin.top + 20 * i - 2) // 2 is a fudge factor. Just looks better.
+    .attr("r", 4)
+    .style("fill", (d, i) => d3.schemeCategory10[i])
+    .attr("class", "legendCircle");
+
+  keys
+    .append("text")
+    .attr("x", legendX + legendMargin.left * 2)
+    .attr("y", (d, i) => legendY + legendMargin.top + 20 * i)
+    .style("fill", "black")
+    .attr("text-anchor", "left")
+    .attr("alignment-baseline", "middle")
+    .attr("class", "legendLabel")
+    .text(d => d);
 };
 
 // XXX: I don't _really_ get why we get a row here even though I set the key
@@ -288,6 +285,7 @@ removeHandler = name => {
   d3.event.preventDefault();
   activeRegions = activeRegions.filter(x => x != name);
   buildTable();
+  graph();
 };
 
 buildTable = async => {
