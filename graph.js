@@ -1,20 +1,40 @@
-label = (svg, color, text, y) => {
-  const x = 50;
+labels = (svg, colors, names, x, y) => {
+  const width = 125;
+  const margin = { top: 10, left: 10 };
+  // legend bg
   svg
+    .append("g")
+    .attr("id", "legend")
+    .append("rect")
+    .attr("x", x)
+    .attr("y", y)
+    .attr("width", width) // todo calculate from label length?
+    .attr("height", names.length * 20 + margin.top)
+    .attr("fill", "white");
+
+  d3.select("#legend")
+    .selectAll(".legendCircle")
+    .data(names)
+    .enter()
     .append("circle")
-    .attr("cx", x)
-    .attr("cy", y + 3)
+    .attr("cx", x + margin.left)
+    .attr("cy", (d, i) => y + margin.top + 20 * i - 2) // 2 is a fudge factor. Just looks better.
     .attr("r", 4)
-    .style("fill", color);
-  let label = svg
+    .style("fill", (d, i) => colors[i])
+    .attr("class", "legendCircle");
+
+  d3.select("#legend")
+    .selectAll(".legendLabel")
+    .data(names)
+    .enter()
     .append("text")
-    .attr("x", x + 8)
-    .attr("y", y + 5)
-    .attr("r", 4)
-    .text(text)
+    .attr("x", x + margin.left * 2)
+    .attr("y", (d, i) => y + margin.top + 20 * i)
     .style("fill", "black")
     .attr("text-anchor", "left")
-    .style("alignment-baseline", "middle");
+    .attr("alignment-baseline", "middle")
+    .attr("class", "legendLabel")
+    .text(d => d);
 };
 
 capita = {
@@ -109,6 +129,9 @@ graph = async () => {
           continue;
         }
 
+        const name = row["Province/State"] || row["Country/Region"];
+        row.name = name;
+
         // convert each field to a number
         row[prop] = +row[prop];
 
@@ -131,7 +154,6 @@ graph = async () => {
             maxdt = dt;
           }
 
-          const name = row["Province/State"] || row["Country/Region"];
           // We're going to graph the reported incidences per 10k people
           const percapita = (row[prop] / capita[name]) * 10000;
           if (percapita > maxval) {
@@ -181,6 +203,7 @@ graph = async () => {
     .call(g => g.select(".domain").remove());
 
   // Add y axis: the # of confirmed cases
+  // https://observablehq.com/@d3/styled-axes
   const y = d3
     .scaleLinear()
     .domain([0, maxval])
@@ -208,19 +231,8 @@ graph = async () => {
         .attr("dy", -4)
     );
 
-  // yAxis = svg => svg
-  //     .attr("transform", `translate(${margin.left},0)`)
-  //     .call(d3.axisRight(y)
-  //         .tickSize(width - margin.left - margin.right)
-  //         .tickFormat(formatTick))
-  //     .call(g => g.select(".domain")
-  //         .remove())
-  //     .call(g => g.selectAll(".tick:not(:first-of-type) line")
-  //         .attr("stroke-opacity", 0.5)
-  //         .attr("stroke-dasharray", "2,2"))
-  //     .call(g => g.selectAll(".tick text")
-  //         .attr("x", 4)
-  //         .attr("dy", -4))
+  names = data.map(row => row.name);
+  labels(svg, d3.schemeCategory10, names, 30, 30);
 
   // for every state/nation, create a line
   data.forEach((row, idx) => {
@@ -244,12 +256,6 @@ graph = async () => {
             return y(d.value);
           })
       );
-    label(
-      svg,
-      color,
-      row["Province/State"] || row["Country/Region"],
-      idx * 20 + 50
-    );
   });
 };
 
