@@ -1,3 +1,7 @@
+//TODO y axis label
+//TODO source link (data and code)
+//TODO figure out how to preventDefault
+
 labels = (svg, colors, names, x, y) => {
   const width = 125;
   const margin = { top: 10, left: 10 };
@@ -37,59 +41,62 @@ labels = (svg, colors, names, x, y) => {
     .text(d => d);
 };
 
+// TODO China and the US are not available in this data as totals. Maybe write
+// a post-download-processing script?
 capita = {
   Italy: 60317546,
-  Alabama: 4830620,
-  Alaska: 733375,
-  Arizona: 6641928,
-  Arkansas: 2958208,
-  California: 38421464,
-  Colorado: 5278906,
-  Connecticut: 3593222,
-  Delaware: 926454,
-  "District of Columbia": 647484,
-  Florida: 19645772,
-  Georgia: 10006693,
-  Hawaii: 1406299,
-  Idaho: 1616547,
-  Illinois: 12873761,
-  Indiana: 6568645,
-  Iowa: 3093526,
-  Kansas: 2892987,
-  Kentucky: 4397353,
-  Louisiana: 4625253,
-  Maine: 1329100,
-  Maryland: 5930538,
-  Massachusetts: 6705586,
-  Michigan: 9900571,
-  Minnesota: 5419171,
-  Mississippi: 2988081,
-  Missouri: 6045448,
-  Montana: 1014699,
-  Nebraska: 1869365,
-  Nevada: 2798636,
-  "New Hampshire": 1324201,
-  "New Jersey": 8904413,
-  "New Mexico": 2084117,
-  "New York": 19673174,
-  "North Carolina": 9845333,
-  "North Dakota": 721640,
-  Ohio: 11575977,
-  Oklahoma: 3849733,
-  Oregon: 3939233,
-  Pennsylvania: 12779559,
-  "Rhode Island": 1053661,
-  "South Carolina": 4777576,
-  "South Dakota": 843190,
-  Tennessee: 6499615,
-  Texas: 26538614,
-  Utah: 2903379,
-  Vermont: 626604,
-  Virginia: 8256630,
-  Washington: 6985464,
+  China: 1427647786,
+  "Alabama, US": 4830620,
+  "Alaska, US": 733375,
+  "Arizona, US": 6641928,
+  "Arkansas, US": 2958208,
+  "California, US": 38421464,
+  "Colorado, US": 5278906,
+  "Connecticut, US": 3593222,
+  "Delaware, US": 926454,
+  "District of Columbia, US": 647484,
+  "Florida, US": 19645772,
+  "Georgia, US": 10006693,
+  "Hawaii, US": 1406299,
+  "Idaho, US": 1616547,
+  "Illinois, US": 12873761,
+  "Indiana, US": 6568645,
+  "Iowa, US": 3093526,
+  "Kansas, US": 2892987,
+  "Kentucky, US": 4397353,
+  "Louisiana, US": 4625253,
+  "Maine, US": 1329100,
+  "Maryland, US": 5930538,
+  "Massachusetts, US": 6705586,
+  "Michigan, US": 9900571,
+  "Minnesota, US": 5419171,
+  "Mississippi, US": 2988081,
+  "Missouri, US": 6045448,
+  "Montana, US": 1014699,
+  "Nebraska, US": 1869365,
+  "Nevada, US": 2798636,
+  "New Hampshire, US": 1324201,
+  "New Jersey, US": 8904413,
+  "New Mexico, US": 2084117,
+  "New York, US": 19673174,
+  "North Carolina, US": 9845333,
+  "North Dakota, US": 721640,
+  "Ohio, US": 11575977,
+  "Oklahoma, US": 3849733,
+  "Oregon, US": 3939233,
+  "Pennsylvania, US": 12779559,
+  "Rhode Island, US": 1053661,
+  "South Carolina, US": 4777576,
+  "South Dakota, US": 843190,
+  "Tennessee, US": 6499615,
+  "Texas, US": 26538614,
+  "Utah, US": 2903379,
+  "Vermont, US": 626604,
+  "Virginia, US": 8256630,
+  "Washington, US": 6985464,
   "West Virginia": 1851420,
-  Wisconsin: 5742117,
-  Wyoming: 579679,
+  "Wisconsin, US": 5742117,
+  "Wyoming, US": 579679,
   "Puerto Rico": 3583073,
   "South Korea": 51709098
 };
@@ -97,42 +104,59 @@ capita = {
 // intentionally global. Let's let users play with it in the console if they want
 covidData = undefined;
 
+// activeRegions must match the displayName of a covidData row
+let activeRegions = [
+  "Italy",
+  "South Korea",
+  "California, US",
+  "Washington, US",
+  "New York, US",
+  "New Jersey, US",
+  "Maine, US"
+];
+
 fetchData = async () => {
+  const startdate = new Date(2020, 1, 21);
+
+  // update the global covidData obj
   covidData = await d3.csv("./time_series_19-covid-Confirmed.csv", row => {
+    // Fix any names that need to be fixed here
     if (row["Country/Region"] == "Korea, South") {
       row["Country/Region"] = "South Korea";
     }
 
+    const name = row["Province/State"] || row["Country/Region"];
+    row.name = name;
+
+    if (row["Province/State"]) {
+      row.displayName = `${row["Province/State"]}, ${row["Country/Region"]}`;
+    } else {
+      row.displayName = `${row["Country/Region"]}`;
+    }
+
+    // skip countries we don't have population data for
+    if (!capita.hasOwnProperty(row.displayName)) {
+      return undefined;
+    }
+
     let values = [];
 
-    for (var prop in row) {
+    for (let prop in row) {
       if (Object.prototype.hasOwnProperty.call(row, prop)) {
-        // Province/State and Country/Region fields are string. Everything
-        // else is numeric.
-        if (prop.startsWith("Provi") || prop.startsWith("Country")) {
-          continue;
-        }
-
-        const name = row["Province/State"] || row["Country/Region"];
-        row.name = name;
-        if (row["Province/State"]) {
-          row.displayName = `${row["Province/State"]}, ${
-            row["Country/Region"]
-          }`;
-        }
-
-        // convert each field to a number
-        row[prop] = +row[prop];
-
-        // If the field is a date, parse it and find out if it's the min or max
-        // date and if it's the largest value in the dataset. Finally, add it
-        // to the values array. (We'll use this for graphing)
+        // If the field is a date, parse it and add it to the values array.
+        // (We'll use this for graphing)
         const parts = prop.split("/");
         if (parts.length == 3) {
+          // convert each field to a number
+          row[prop] = +row[prop];
+
           dt = new Date(+("20" + parts[2]), +parts[0] - 1, +parts[1]);
+          if (dt < startdate) {
+            continue;
+          }
 
           // We're going to graph the reported incidences per 10k people
-          const percapita = (row[prop] / capita[name]) * 10000;
+          const percapita = (row[prop] / capita[row.displayName]) * 10000;
           values.push({
             dt: dt,
             value: percapita
@@ -143,16 +167,23 @@ fetchData = async () => {
 
     // attach the values array to the row
     row.values = values;
+
     return row;
   });
+  // Sort in order of max per-capita case rate
+  covidData.sort((a, b) =>
+    d3.max(a.values.map(d => d.value)) < d3.max(b.values.map(d => d.value))
+      ? 1
+      : -1
+  );
 };
 
-// regions is a list of regions to graph. the region names must match a
-// covidData.name exactly
-graph = async regions => {
+graph = async => {
   // TODO: better starting point? This is pretty arbitrarily chosen
   const startdt = new Date(2020, 1, 21);
-  const data = covidData.filter(d => regions.indexOf(d.name) != -1);
+  const data = covidData.filter(
+    d => activeRegions.indexOf(d.displayName) != -1
+  );
   const maxdt = d3.max(data[0].values, d => d.dt);
   const maxval = d3.max(data, row => d3.max(row.values.map(d => d.value)));
 
@@ -221,41 +252,76 @@ graph = async regions => {
   labels(svg, d3.schemeCategory10, names, 30, 30);
 
   // for every state/nation, create a line
-  data.forEach((row, idx) => {
-    // 10 categorical colors. 10 lines seems like a reasonable max we can
-    // display on the graph?
-    const color = d3.schemeCategory10[idx];
-    svg
-      .append("path")
-      .datum(row.values)
-      .attr("fill", "none")
-      .attr("stroke", color)
-      .attr("stroke-width", 1.5)
-      .attr(
-        "d",
-        d3
-          .line()
-          .x(function(d) {
-            return x(d.dt);
-          })
-          .y(function(d) {
-            return y(d.value);
-          })
-      );
-  });
+  svg
+    .selectAll(".line")
+    .data(data)
+    .enter()
+    .append("path")
+    .datum(d => d.values)
+    .attr("fill", "none")
+    .attr("stroke", (d, i) => d3.schemeCategory10[i])
+    .attr("stroke-width", 1.5)
+    .attr("class", "line")
+    .attr(
+      "d",
+      d3
+        .line()
+        .x(function(d) {
+          return x(d.dt);
+        })
+        .y(function(d) {
+          return y(d.value);
+        })
+    );
+};
+
+// XXX: I don't _really_ get why we get a row here even though I set the key
+// function on .data to use displayName :shrug:
+addHandler = row => {
+  d3.event.preventDefault();
+  console.log("add name: ", name);
+  activeRegions.push(row.displayName);
+  buildTable();
+  graph();
+};
+
+removeHandler = name => {
+  d3.event.preventDefault();
+  activeRegions = activeRegions.filter(x => x != name);
+  buildTable();
+};
+
+buildTable = async => {
+  d3.select("#allRegions ul")
+    .selectAll("li.region")
+    .data(covidData, d => d.displayName)
+    .join("li")
+    .attr("class", "region")
+    .on("click", addHandler)
+    .html(
+      d =>
+        `<a href="#" class="add" data-name="${d.displayName}">${d.displayName} >></a>`
+    );
+
+  d3.select("#selectedRegions ul")
+    .selectAll("li.activeRegion")
+    .data(activeRegions, d => d)
+    .join(
+      enter =>
+        enter
+          .append("li")
+          .attr("class", "activeRegion")
+          .on("click", removeHandler),
+      update => update,
+      exit => exit.remove()
+    )
+    .html(d => `<a href="#" class="rem" data-name="${d}">${d} <<</a>`);
 };
 
 main = async () => {
   await fetchData();
-  await graph([
-    "Italy",
-    "South Korea",
-    "California",
-    "Washington",
-    "New York",
-    "New Jersey",
-    "Maine"
-  ]);
+  await graph();
+  await buildTable();
 };
 
 window.addEventListener("DOMContentLoaded", evt => {
