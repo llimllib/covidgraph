@@ -116,7 +116,10 @@ fetchData = async () => {
     if (row[ckey] == "Korea, South") {
       row[ckey] = "South Korea";
     }
-    if (row[ckey] == "United Kingdom" && row[pkey] == "United Kingdom") {
+
+    // Many countries are listed like France, France or United Kingdom, United
+    // Kingdom. Remove their pkey so we read them as a country
+    if (row[ckey] == row[pkey]) {
       row[pkey] = "";
     }
 
