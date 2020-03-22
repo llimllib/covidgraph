@@ -1,3 +1,4 @@
+// TODO labels are wrong
 // TODO y axis label
 // TODO hover
 // TODO China and the US are not available in this data as totals. Maybe write
@@ -18,17 +19,17 @@ covidData = undefined;
 // activeRegions must match the displayName of a covidData row
 let activeRegions = [
   "Italy",
+  "New York, US",
+  "Washington, US",
   "South Korea",
   "California, US",
-  "Washington, US",
-  "New York, US",
   "New Jersey, US",
   "Maine, US",
 ];
 
-fetchData = async () => {
-  const startdate = new Date(2020, 1, 21);
+const startdt = new Date(2020, 2, 1);
 
+fetchData = async () => {
   // update the global covidData obj
   covidData = await d3.csv("./time_series_19-covid-Confirmed.csv", (row) => {
     // Fix any names that need to be fixed here
@@ -62,7 +63,7 @@ fetchData = async () => {
           row[prop] = +row[prop];
 
           dt = new Date(+("20" + parts[2]), +parts[0] - 1, +parts[1]);
-          if (dt < startdate) {
+          if (dt < startdt) {
             continue;
           }
 
@@ -90,7 +91,6 @@ fetchData = async () => {
 };
 
 graph = (async) => {
-  const startdt = new Date(2020, 1, 21);
   const data = covidData.filter(
     (d) => activeRegions.indexOf(d.displayName) != -1
   );
