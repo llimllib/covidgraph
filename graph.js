@@ -131,7 +131,11 @@ graph = (async) => {
       g.selectAll(".tick:not(:first-of-type) line").attr("stroke-opacity", 0.2)
     )
     // move the tick labels to the left
-    .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
+    .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4))
+    .append("text") // XXX: for some reason this hides behind the graph? figure this out
+    .attr("x", 10)
+    .attr("y", 50)
+    .text("Confirmed covid cases per 10,000 people");
 
   names = data.map((row) => row.name);
   // labels(svg, d3.schemeCategory10, activeRegions, 30, 30);
@@ -156,15 +160,15 @@ graph = (async) => {
     .attr("d", (d) => line(d.values));
 
   const legendWidth = 125;
-  const legendX = 30;
-  const legendY = 30;
-  const legendMargin = { top: 10, left: 10 };
+  const legendX = 10;
+  const legendY = 10;
+  const legendMargin = { top: 100, left: 20 };
   const legend = svg.append("g");
 
   legend
     .append("rect")
-    .attr("x", legendX)
-    .attr("y", legendY)
+    .attr("x", legendMargin.left + legendX)
+    .attr("y", legendMargin.top + legendY)
     .attr("width", legendWidth) // todo calculate from label length?
     .attr("height", activeRegions.length * 20 + margin.top)
     .attr("id", "legendBG")
