@@ -1,7 +1,5 @@
 // TODO hover
-// TODO China and the whole US are not available in this data as totals. Maybe
-// write a post-download-processing script?
-// TODO: better starting point? Feb 21 is pretty arbitrarily chosen as the date
+// TODO: better starting point? Mar 1 is pretty arbitrarily chosen as the date
 // Italy passed 20 cases
 //   * probably something like the earliest a selected country passed n cases?
 //   * configurable starting point?
@@ -11,6 +9,7 @@
 
 // intentionally global. Let's let users play with it in the console if they want
 covidData = undefined;
+rawData = undefined;
 
 // activeRegions must match the displayName of a covidData row
 let activeRegions = [
@@ -25,16 +24,96 @@ let activeRegions = [
 
 const startdt = new Date(2020, 2, 1);
 
+addChina = (data) => {
+  newRow = {
+    name: "China",
+    displayName: "China",
+    "Country/Region": "China",
+  };
+
+  data.forEach((row) => {
+    if (row["Country/Region"] == "China") {
+      for (let prop in row) {
+        const parts = prop.split("/");
+        // if it's a date
+        if (parts.length == 3) {
+          if (!newRow.hasOwnProperty(prop)) {
+            newRow[prop] = row[prop];
+          } else {
+            newRow[prop] += row[prop];
+          }
+        }
+      }
+    }
+  });
+
+  data.push(newRow);
+};
+
+addUSA = (data) => {
+  newRow = {
+    displayName: "United States",
+    "Country/Region": "United States",
+  };
+
+  data.forEach((row) => {
+    // there are rows for particular US counties in the data set; eliminate
+    // those by checking for a comma in the province/state field
+    if (
+      row["Country/Region"] == "US" &&
+      row["Province/State"].indexOf(",") == -1
+    ) {
+      for (let prop in row) {
+        const parts = prop.split("/");
+        // if it's a date
+        if (parts.length == 3) {
+          if (!newRow.hasOwnProperty(prop)) {
+            newRow[prop] = row[prop];
+          } else {
+            newRow[prop] += row[prop];
+          }
+        }
+      }
+    }
+  });
+
+  data.push(newRow);
+};
+
+calcPerCapitaValues = (data) => {
+  data.forEach((row) => {
+    let values = [];
+
+    for (let prop in row) {
+      // If the field is a date, parse it and add it to the values array.
+      // (We'll use this for graphing)
+      const parts = prop.split("/");
+      if (parts.length == 3) {
+        const dt = new Date(+("20" + parts[2]), +parts[0] - 1, +parts[1]);
+
+        if (dt < startdt) {
+          continue;
+        }
+
+        // We're going to graph the reported incidences per 10k people
+        const percapita = (row[prop] / capita[row.displayName]) * 10000;
+        values.push({
+          dt: dt,
+          value: percapita,
+        });
+      }
+    }
+
+    row.values = values;
+  });
+};
+
 fetchData = async () => {
-  // update the global covidData obj
-  covidData = await d3.csv("./time_series_19-covid-Confirmed.csv", (row) => {
+  let rawData = await d3.csv("./time_series_19-covid-Confirmed.csv", (row) => {
     // Fix any names that need to be fixed here
     if (row["Country/Region"] == "Korea, South") {
       row["Country/Region"] = "South Korea";
     }
-
-    const name = row["Province/State"] || row["Country/Region"];
-    row.name = name;
 
     if (row["Province/State"]) {
       row.displayName = `${row["Province/State"]}, ${row["Country/Region"]}`;
@@ -42,42 +121,31 @@ fetchData = async () => {
       row.displayName = `${row["Country/Region"]}`;
     }
 
-    // skip countries we don't have population data for
-    if (!capita.hasOwnProperty(row.displayName)) {
-      return undefined;
-    }
-
-    let values = [];
-
     for (let prop in row) {
       if (Object.prototype.hasOwnProperty.call(row, prop)) {
-        // If the field is a date, parse it and add it to the values array.
-        // (We'll use this for graphing)
+        // If the field is a date, convert its value to a number
         const parts = prop.split("/");
         if (parts.length == 3) {
-          // convert each field to a number
           row[prop] = +row[prop];
-
-          dt = new Date(+("20" + parts[2]), +parts[0] - 1, +parts[1]);
-          if (dt < startdt) {
-            continue;
-          }
-
-          // We're going to graph the reported incidences per 10k people
-          const percapita = (row[prop] / capita[row.displayName]) * 10000;
-          values.push({
-            dt: dt,
-            value: percapita,
-          });
         }
       }
     }
 
-    // attach the values array to the row
-    row.values = values;
-
     return row;
   });
+
+  addChina(rawData);
+  addUSA(rawData);
+
+  // skip countries we don't have population data for. Intentionally populate
+  // the global covidData value
+  covidData = rawData.filter(
+    (d) =>
+      capita.hasOwnProperty(d.displayName) && capita[d.displayName] > 100000
+  );
+
+  calcPerCapitaValues(covidData);
+
   // Sort in order of max per-capita case rate
   covidData.sort((a, b) =>
     d3.max(a.values.map((d) => d.value)) < d3.max(b.values.map((d) => d.value))
@@ -86,7 +154,7 @@ fetchData = async () => {
   );
 };
 
-graph = (async) => {
+graph = () => {
   const data = covidData.filter(
     (d) => activeRegions.indexOf(d.displayName) != -1
   );
@@ -133,7 +201,6 @@ graph = (async) => {
     )
     // move the tick labels to the left
     .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
-  names = data.map((row) => row.name);
   // labels(svg, d3.schemeCategory10, activeRegions, 30, 30);
 
   const line = d3
@@ -215,7 +282,7 @@ removeHandler = (name) => {
   graph();
 };
 
-buildTable = (async) => {
+buildTable = () => {
   const inactiveRegions = covidData
     .map((d) => d.displayName)
     .filter((d) => activeRegions.indexOf(d) == -1);
@@ -252,8 +319,8 @@ buildTable = (async) => {
 
 main = async () => {
   await fetchData();
-  await graph();
-  await buildTable();
+  graph();
+  buildTable();
 };
 
 window.addEventListener("DOMContentLoaded", (evt) => {
