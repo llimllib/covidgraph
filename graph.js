@@ -102,8 +102,12 @@ graph = (async) => {
     width = 800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom;
 
+  // clear the container
+  d3.select("#graphContainer svg").remove();
+
   const svg = d3
-    .select("svg#graph")
+    .select("#graphContainer")
+    .append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
     .append("g")
@@ -131,12 +135,7 @@ graph = (async) => {
       g.selectAll(".tick:not(:first-of-type) line").attr("stroke-opacity", 0.2)
     )
     // move the tick labels to the left
-    .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4))
-    .append("text") // XXX: for some reason this hides behind the graph? figure this out
-    .attr("x", 10)
-    .attr("y", 50)
-    .text("Confirmed covid cases per 10,000 people");
-
+    .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
   names = data.map((row) => row.name);
   // labels(svg, d3.schemeCategory10, activeRegions, 30, 30);
 
@@ -150,8 +149,8 @@ graph = (async) => {
   svg
     .append("g")
     .attr("class", "lines")
-    .selectAll("path.line")
-    .data(data, (d) => d)
+    .selectAll("path")
+    .data(data, (d) => d.values)
     .join("path")
     .attr("fill", "none")
     .attr("stroke", (d, i) => d3.schemeCategory10[i])
@@ -193,6 +192,12 @@ graph = (async) => {
     .attr("alignment-baseline", "middle")
     .attr("class", "legendLabel")
     .text((d, i) => d.displayName);
+
+  svg
+    .append("text") // XXX: for some reason this hides behind the graph? figure this out
+    .attr("x", 20)
+    .attr("y", 50)
+    .text("Confirmed covid cases per 10,000 people");
 };
 
 addHandler = (name) => {
