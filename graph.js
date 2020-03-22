@@ -1,4 +1,3 @@
-// TODO y axis label
 // TODO hover
 // TODO China and the US are not available in this data as totals. Maybe write
 // a post-download-processing script?
@@ -6,8 +5,6 @@
 // Italy passed 20 cases
 //   * probably something like the earliest a selected country passed n cases?
 //   * configurable starting point?
-// TODO: separate out capita
-// TODO: make removing Italy work
 // TODO: enforce 10 item max
 // TODO: option to align the epidemic starts in some way?
 //   * might be a new graph?
