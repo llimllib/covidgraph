@@ -3,7 +3,6 @@
 // Italy passed 20 cases
 //   * probably something like the earliest a selected country passed n cases?
 //   * configurable starting point?
-// TODO: enforce 10 item max
 // TODO: option to align the epidemic starts in some way?
 //   * might be a new graph?
 
@@ -110,15 +109,21 @@ calcPerCapitaValues = (data) => {
 
 fetchData = async () => {
   let rawData = await d3.csv("./time_series_19-covid-Confirmed.csv", (row) => {
+    ckey = "Country/Region";
+    pkey = "Province/State";
+
     // Fix any names that need to be fixed here
-    if (row["Country/Region"] == "Korea, South") {
-      row["Country/Region"] = "South Korea";
+    if (row[ckey] == "Korea, South") {
+      row[ckey] = "South Korea";
+    }
+    if (row[ckey] == "United Kingdom" && row[pkey] == "United Kingdom") {
+      row[pkey] = "";
     }
 
-    if (row["Province/State"]) {
-      row.displayName = `${row["Province/State"]}, ${row["Country/Region"]}`;
+    if (row[pkey]) {
+      row.displayName = `${row[pkey]}, ${row[ckey]}`;
     } else {
-      row.displayName = `${row["Country/Region"]}`;
+      row.displayName = `${row[ckey]}`;
     }
 
     for (let prop in row) {
