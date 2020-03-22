@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html>
 	<head>
-        <link rel="stylesheet" href="../static/tufte.css"/>
 		<meta charset="UTF-8">
-		<title>US Covid</title>
+		<title>US States Covid Graph</title>
 <style>
 .selector {
   display: inline-block;
@@ -13,10 +12,19 @@
 
 h4 {
   display: inline-block;
+  margin-bottom: 0px;
 }
 
 #graphContainer {
   margin-top: 30px;
+}
+
+a:visited {
+  color: blue;
+}
+
+.headerLI {
+  height: 80px;
 }
 </style>
 <script src="https://d3js.org/d3.v5.js"></script>
@@ -27,14 +35,19 @@ h4 {
     <div id="graphContainer">
     </div>
     <div id="regionSelector">
-      <span id="allRegions">
-        <ul class="selector">
-          <li><h4>Click to add</h4></li>
+      <span id="countries">
+        <ul class="countryList selector">
+          <li class="headerLI"><h4>Countries</h4><br>(click to add)</li>
+        </ul>
+      </span>
+      <span id="states">
+        <ul class="stateList selector">
+          <li class="headerLI"><h4>US States</h4><br>(click to add)</li>
         </ul>
       </span>
       <span id="selectedRegions">
         <ul class="selector">
-          <li><h4>Click to remove (10 item max)</h4></li>
+          <li class="headerLI"><h4>Selected Areas</h4><br>(click to remove. 10 max)</li>
         </ul>
       </span>
     </div>

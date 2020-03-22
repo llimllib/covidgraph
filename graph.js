@@ -1,6 +1,6 @@
 // TODO hover
-// TODO China and the US are not available in this data as totals. Maybe write
-// a post-download-processing script?
+// TODO China and the whole US are not available in this data as totals. Maybe
+// write a post-download-processing script?
 // TODO: better starting point? Feb 21 is pretty arbitrarily chosen as the date
 // Italy passed 20 cases
 //   * probably something like the earliest a selected country passed n cases?
@@ -200,7 +200,9 @@ graph = (async) => {
 addHandler = (name) => {
   d3.event.preventDefault();
 
-  activeRegions.push(name);
+  if (activeRegions.length < 10) {
+    activeRegions.push(name);
+  }
   buildTable();
   graph();
 };
@@ -214,13 +216,26 @@ removeHandler = (name) => {
 };
 
 buildTable = (async) => {
-  inactiveRegions = covidData
+  const inactiveRegions = covidData
     .map((d) => d.displayName)
     .filter((d) => activeRegions.indexOf(d) == -1);
 
-  d3.select("#allRegions ul")
+  const inactiveCountries = inactiveRegions
+    .filter((d) => d.indexOf(", US") == -1)
+    .slice(0, 40);
+  const inactiveStates = inactiveRegions.filter((d) => d.indexOf(", US") != -1);
+
+  d3.select("#countries ul")
     .selectAll("li.region")
-    .data(inactiveRegions, (d) => d)
+    .data(inactiveCountries, (d) => d)
+    .join("li")
+    .attr("class", "region")
+    .on("click", addHandler)
+    .html((d) => `<a href="#" class="add" data-name="${d}">${d} >></a>`);
+
+  d3.select("#states ul")
+    .selectAll("li.region")
+    .data(inactiveStates, (d) => d)
     .join("li")
     .attr("class", "region")
     .on("click", addHandler)
