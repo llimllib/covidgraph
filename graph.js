@@ -145,17 +145,16 @@ graph = (async) => {
   // for every state/nation, create a line
   // example to follow: https://observablehq.com/@d3/index-chart
   svg
-    .selectAll("path")
-    .data(
-      data.map((d) => d.values),
-      (d) => d
-    )
+    .append("g")
+    .attr("class", "lines")
+    .selectAll("path.line")
+    .data(data, (d) => d)
     .join("path")
     .attr("fill", "none")
     .attr("stroke", (d, i) => d3.schemeCategory10[i])
     .attr("stroke-width", 1.5)
     .attr("class", "line")
-    .attr("d", (d) => line(d));
+    .attr("d", (d) => line(d.values));
 
   const legendWidth = 125;
   const legendX = 30;
