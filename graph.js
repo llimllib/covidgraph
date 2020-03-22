@@ -1,69 +1,16 @@
 // TODO y axis label
-// TODO source link (data and code)
 // TODO hover
 // TODO China and the US are not available in this data as totals. Maybe write
 // a post-download-processing script?
 // TODO: better starting point? Feb 21 is pretty arbitrarily chosen as the date
 // Italy passed 20 cases
+//   * probably something like the earliest a selected country passed n cases?
+//   * configurable starting point?
 // TODO: separate out capita
 // TODO: make removing Italy work
-capita = {
-  Italy: 60317546,
-  China: 1427647786,
-  "Alabama, US": 4830620,
-  "Alaska, US": 733375,
-  "Arizona, US": 6641928,
-  "Arkansas, US": 2958208,
-  "California, US": 38421464,
-  "Colorado, US": 5278906,
-  "Connecticut, US": 3593222,
-  "Delaware, US": 926454,
-  "District of Columbia, US": 647484,
-  "Florida, US": 19645772,
-  "Georgia, US": 10006693,
-  "Hawaii, US": 1406299,
-  "Idaho, US": 1616547,
-  "Illinois, US": 12873761,
-  "Indiana, US": 6568645,
-  "Iowa, US": 3093526,
-  "Kansas, US": 2892987,
-  "Kentucky, US": 4397353,
-  "Louisiana, US": 4625253,
-  "Maine, US": 1329100,
-  "Maryland, US": 5930538,
-  "Massachusetts, US": 6705586,
-  "Michigan, US": 9900571,
-  "Minnesota, US": 5419171,
-  "Mississippi, US": 2988081,
-  "Missouri, US": 6045448,
-  "Montana, US": 1014699,
-  "Nebraska, US": 1869365,
-  "Nevada, US": 2798636,
-  "New Hampshire, US": 1324201,
-  "New Jersey, US": 8904413,
-  "New Mexico, US": 2084117,
-  "New York, US": 19673174,
-  "North Carolina, US": 9845333,
-  "North Dakota, US": 721640,
-  "Ohio, US": 11575977,
-  "Oklahoma, US": 3849733,
-  "Oregon, US": 3939233,
-  "Pennsylvania, US": 12779559,
-  "Rhode Island, US": 1053661,
-  "South Carolina, US": 4777576,
-  "South Dakota, US": 843190,
-  "Tennessee, US": 6499615,
-  "Texas, US": 26538614,
-  "Utah, US": 2903379,
-  "Vermont, US": 626604,
-  "Virginia, US": 8256630,
-  "Washington, US": 6985464,
-  "West Virginia": 1851420,
-  "Wisconsin, US": 5742117,
-  "Wyoming, US": 579679,
-  "Puerto Rico": 3583073,
-  "South Korea": 51709098
-};
+// TODO: enforce 10 item max
+// TODO: option to align the epidemic starts in some way?
+//   * might be a new graph?
 
 // intentionally global. Let's let users play with it in the console if they want
 covidData = undefined;
@@ -76,14 +23,14 @@ let activeRegions = [
   "Washington, US",
   "New York, US",
   "New Jersey, US",
-  "Maine, US"
+  "Maine, US",
 ];
 
 fetchData = async () => {
   const startdate = new Date(2020, 1, 21);
 
   // update the global covidData obj
-  covidData = await d3.csv("./time_series_19-covid-Confirmed.csv", row => {
+  covidData = await d3.csv("./time_series_19-covid-Confirmed.csv", (row) => {
     // Fix any names that need to be fixed here
     if (row["Country/Region"] == "Korea, South") {
       row["Country/Region"] = "South Korea";
@@ -123,7 +70,7 @@ fetchData = async () => {
           const percapita = (row[prop] / capita[row.displayName]) * 10000;
           values.push({
             dt: dt,
-            value: percapita
+            value: percapita,
           });
         }
       }
@@ -136,19 +83,19 @@ fetchData = async () => {
   });
   // Sort in order of max per-capita case rate
   covidData.sort((a, b) =>
-    d3.max(a.values.map(d => d.value)) < d3.max(b.values.map(d => d.value))
+    d3.max(a.values.map((d) => d.value)) < d3.max(b.values.map((d) => d.value))
       ? 1
       : -1
   );
 };
 
-graph = async => {
+graph = (async) => {
   const startdt = new Date(2020, 1, 21);
   const data = covidData.filter(
-    d => activeRegions.indexOf(d.displayName) != -1
+    (d) => activeRegions.indexOf(d.displayName) != -1
   );
-  const maxdt = d3.max(data[0].values, d => d.dt);
-  const maxval = d3.max(data, row => d3.max(row.values.map(d => d.value)));
+  const maxdt = d3.max(data[0].values, (d) => d.dt);
+  const maxval = d3.max(data, (row) => d3.max(row.values.map((d) => d.value)));
 
   console.log(data);
 
@@ -164,70 +111,51 @@ graph = async => {
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
   // Add X axis: the date
-  const x = d3
-    .scaleTime()
-    .domain([startdt, maxdt])
-    .range([0, width]);
+  const x = d3.scaleTime().domain([startdt, maxdt]).range([0, width]);
   svg
     .append("g")
     .attr("transform", "translate(0," + (height + 10) + ")")
-    .call(
-      d3
-        .axisBottom(x)
-        .ticks(15)
-        .tickSizeOuter(0)
-        .tickSizeInner(0)
-    )
-    .call(g => g.select(".domain").remove());
+    .call(d3.axisBottom(x).ticks(15).tickSizeOuter(0).tickSizeInner(0))
+    .call((g) => g.select(".domain").remove());
 
   // Add y axis: the # of confirmed cases
   // https://observablehq.com/@d3/styled-axes
-  const y = d3
-    .scaleLinear()
-    .domain([0, maxval])
-    .range([height, 0]);
+  const y = d3.scaleLinear().domain([0, maxval]).range([height, 0]);
   svg
     .append("g")
     .attr("transform", "translate(0, 0)")
-    .call(
-      d3
-        .axisRight(y)
-        .tickSize(width)
-        .ticks(10)
-    )
+    .call(d3.axisRight(y).tickSize(width).ticks(10))
     // remove the y axis bar
-    .call(g => g.select(".domain").remove())
+    .call((g) => g.select(".domain").remove())
     // make the tick lines translucent
-    .call(g =>
+    .call((g) =>
       g.selectAll(".tick:not(:first-of-type) line").attr("stroke-opacity", 0.2)
     )
     // move the tick labels to the left
-    .call(g =>
-      g
-        .selectAll(".tick text")
-        .attr("x", 4)
-        .attr("dy", -4)
-    );
+    .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
 
-  names = data.map(row => row.name);
+  names = data.map((row) => row.name);
   // labels(svg, d3.schemeCategory10, activeRegions, 30, 30);
 
   const line = d3
     .line()
-    .x(d => x(d.dt))
-    .y(d => y(d.value));
+    .x((d) => x(d.dt))
+    .y((d) => y(d.value));
 
   // for every state/nation, create a line
   // example to follow: https://observablehq.com/@d3/index-chart
   svg
     .selectAll("path")
-    .data(data.map(d => d.values), d => d)
+    .data(
+      data.map((d) => d.values),
+      (d) => d
+    )
     .join("path")
     .attr("fill", "none")
     .attr("stroke", (d, i) => d3.schemeCategory10[i])
     .attr("stroke-width", 1.5)
     .attr("class", "line")
-    .attr("d", d => line(d));
+    .attr("d", (d) => line(d));
 
   const legendWidth = 125;
   const legendX = 30;
@@ -244,10 +172,7 @@ graph = async => {
     .attr("id", "legendBG")
     .attr("fill", "white");
 
-  const keys = legend
-    .selectAll("g")
-    .data(activeRegions)
-    .join("g");
+  const keys = legend.selectAll("g").data(activeRegions).join("g");
 
   keys
     .append("circle")
@@ -265,10 +190,10 @@ graph = async => {
     .attr("text-anchor", "left")
     .attr("alignment-baseline", "middle")
     .attr("class", "legendLabel")
-    .text(d => d);
+    .text((d) => d);
 };
 
-addHandler = name => {
+addHandler = (name) => {
   d3.event.preventDefault();
 
   activeRegions.push(name);
@@ -276,34 +201,34 @@ addHandler = name => {
   graph();
 };
 
-removeHandler = name => {
+removeHandler = (name) => {
   d3.event.preventDefault();
 
-  activeRegions = activeRegions.filter(x => x != name);
+  activeRegions = activeRegions.filter((x) => x != name);
   buildTable();
   graph();
 };
 
-buildTable = async => {
+buildTable = (async) => {
   inactiveRegions = covidData
-    .map(d => d.displayName)
-    .filter(d => activeRegions.indexOf(d) == -1);
+    .map((d) => d.displayName)
+    .filter((d) => activeRegions.indexOf(d) == -1);
 
   d3.select("#allRegions ul")
     .selectAll("li.region")
-    .data(inactiveRegions, d => d)
+    .data(inactiveRegions, (d) => d)
     .join("li")
     .attr("class", "region")
     .on("click", addHandler)
-    .html(d => `<a href="#" class="add" data-name="${d}">${d} >></a>`);
+    .html((d) => `<a href="#" class="add" data-name="${d}">${d} >></a>`);
 
   d3.select("#selectedRegions ul")
     .selectAll("li.activeRegion")
-    .data(activeRegions, d => d)
+    .data(activeRegions, (d) => d)
     .join("li")
     .attr("class", "activeRegion")
     .on("click", removeHandler)
-    .html(d => `<a href="#" class="rem" data-name="${d}">${d} <<</a>`);
+    .html((d) => `<a href="#" class="rem" data-name="${d}">${d} <<</a>`);
 };
 
 main = async () => {
@@ -312,6 +237,6 @@ main = async () => {
   await buildTable();
 };
 
-window.addEventListener("DOMContentLoaded", evt => {
+window.addEventListener("DOMContentLoaded", (evt) => {
   main();
 });
