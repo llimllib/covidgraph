@@ -1,4 +1,3 @@
-// TODO labels are wrong
 // TODO y axis label
 // TODO hover
 // TODO China and the US are not available in this data as totals. Maybe write
@@ -171,7 +170,7 @@ graph = (async) => {
     .attr("id", "legendBG")
     .attr("fill", "white");
 
-  const keys = legend.selectAll("g").data(activeRegions).join("g");
+  const keys = legend.selectAll("g").data(data).join("g");
 
   keys
     .append("circle")
@@ -189,7 +188,7 @@ graph = (async) => {
     .attr("text-anchor", "left")
     .attr("alignment-baseline", "middle")
     .attr("class", "legendLabel")
-    .text((d) => d);
+    .text((d, i) => d.displayName);
 };
 
 addHandler = (name) => {
