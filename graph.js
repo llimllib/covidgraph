@@ -3,14 +3,13 @@
 // Italy passed 20 cases
 //   * probably something like the earliest a selected country passed n cases?
 //   * configurable starting point?
-// TODO: option to align the epidemic starts in some way?
-//   * might be a new graph?
 // TODO: permalinks that allow sharing of a graph with a particular country set
 // or axis type
 
 // intentionally global. Let's let users play with it in the console if they want
 covidData = undefined;
 rawData = undefined;
+baselineData = undefined;
 
 // activeRegions must match the displayName of a covidData row
 let activeRegions = [
@@ -173,7 +172,168 @@ fetchData = async () => {
   );
 };
 
+calcBaselineAlignedData = () => {
+  // intentionally update the global baselineData
+  baselineData = rawData.map((row) => {
+    newRow = { displayName: row.displayName };
+    passedTen = false;
+    values = [];
+    // For every column in the row, if it's a date column, check if it's >10.
+    // As soon as we have one column that is, start saving every data point.
+    // Assumes that the date columns remain sorted in ascending order.
+    for (let prop in row) {
+      const parts = prop.split("/");
+      // if it's a date
+      if (parts.length == 3) {
+        const percapita = (row[prop] / capita[row.displayName]) * 10000;
+        if (!passedTen && percapita > 0.1) {
+          passedTen = true;
+        }
+        if (passedTen) {
+          values.push(percapita);
+        }
+      }
+    }
+    newRow.values = values;
+    return newRow;
+  });
+};
+
+// Create a graph where each state/country/we is graphed where day 0 is the day they had 10 cases
+graphBaselineAligned = () => {
+  if (!baselineData) {
+    calcBaselineAlignedData();
+  }
+  const data = activeRegions.map((r) =>
+    baselineData.find((d) => d.displayName == r)
+  );
+  const maxX = d3.max(data.map((d) => d.values.length));
+  const maxY = d3.max(data.map((d) => d3.max(d.values)));
+
+  console.log(data);
+  const margin = { top: 10, right: 30, bottom: 50, left: 60 },
+    width = 800 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+
+  // clear the container
+  d3.select("#graphContainer svg").remove();
+
+  const svg = d3
+    .select("#graphContainer")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  const x = d3.scaleLinear().domain([0, maxX]).range([0, width]);
+  svg
+    .append("g")
+    .attr("transform", "translate(0," + (height + 10) + ")")
+    .call(d3.axisBottom(x).ticks(8).tickSizeOuter(0).tickSizeInner(0))
+    .call((g) => g.select(".domain").remove());
+
+  // Add y axis: the # of confirmed cases
+  // https://observablehq.com/@d3/styled-axes
+  const y = document.querySelector("#logscale").checked
+    ? d3.scaleLog().domain([0.25, maxY]).range([height, 0]).base(2).clamp(true)
+    : d3.scaleLinear().domain([0, maxY]).range([height, 0]);
+
+  svg
+    .append("g")
+    .attr("transform", "translate(0, 0)")
+    .call(d3.axisRight(y).tickSize(width).ticks(10))
+    // remove the y axis bar
+    .call((g) => g.select(".domain").remove())
+    // make the tick lines translucent
+    .call((g) =>
+      g.selectAll(".tick:not(:first-of-type) line").attr("stroke-opacity", 0.2)
+    )
+    // move the tick labels to the left
+    .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
+
+  const line = d3
+    .line()
+    .x((d, i) => x(i))
+    .y((d) => y(d));
+
+  // for every state/nation, create a line
+  // example to follow: https://observablehq.com/@d3/index-chart
+  svg
+    .append("g")
+    .attr("class", "lines")
+    .selectAll("path")
+    .data(data)
+    .join("path")
+    .attr("fill", "none")
+    .attr("stroke", (d, i) => activeColors[i])
+    .attr("stroke-width", 1.5)
+    .attr("class", "line")
+    .attr("d", (d) => line(d.values));
+
+  const legendWidth = 140;
+  const legendX = 40;
+  const legendY = 10;
+  const legendMargin = { top: 100, left: 20 };
+  const legend = svg.append("g");
+
+  legend
+    .append("rect")
+    .attr("x", legendMargin.left + legendX - 8)
+    .attr("y", legendMargin.top)
+    .attr("width", legendWidth) // todo calculate from label length?
+    .attr("height", activeRegions.length * 20 + margin.top)
+    .attr("id", "legendBG")
+    .attr("fill", "white");
+
+  const keys = legend.selectAll("g").data(data).join("g");
+
+  keys
+    .append("circle")
+    .attr("cx", legendX + legendMargin.left)
+    .attr("cy", (d, i) => legendY + legendMargin.top + 20 * i - 2) // 2 is a fudge factor. Just looks better.
+    .attr("r", 4)
+    .style("fill", (d, i) => activeColors[i])
+    .attr("class", "legendCircle");
+
+  keys
+    .append("text")
+    .attr("x", legendX + legendMargin.left * 2)
+    .attr("y", (d, i) => legendY + legendMargin.top + 20 * i)
+    .style("fill", "black")
+    .attr("text-anchor", "left")
+    .attr("alignment-baseline", "middle")
+    .attr("class", "legendLabel")
+    .text((d, i) => d.displayName);
+
+  svg
+    .append("rect")
+    .attr("x", 27)
+    .attr("y", 30)
+    .attr("width", 270)
+    .attr("height", 20)
+    .attr("fill", "white");
+  svg
+    .append("text") // XXX: for some reason this hides behind the graph? figure this out
+    .attr("x", 30)
+    .attr("y", 50)
+    .text("Confirmed covid cases per 10,000 people");
+
+  svg
+    .append("text") // XXX: for some reason this hides behind the graph? figure this out
+    .attr("x", width / 2)
+    .attr("y", height + 40)
+    .attr("text-anchor", "middle")
+    .text("Days since case rate exceeded .1 per 10k people");
+};
+
 graph = () => {
+  document.querySelector("#alignBaseline").checked
+    ? graphBaselineAligned()
+    : graphByDate();
+};
+
+graphByDate = () => {
   // It's important to keep the order of the `activeRegions` map the same as
   // the order of `data` so that we keep the color choices stable
   const data = activeRegions.map((r) =>
@@ -250,16 +410,16 @@ graph = () => {
     .attr("class", "line")
     .attr("d", (d) => line(d.values));
 
-  const legendWidth = 125;
-  const legendX = 10;
+  const legendWidth = 140;
+  const legendX = 40;
   const legendY = 10;
   const legendMargin = { top: 100, left: 20 };
   const legend = svg.append("g");
 
   legend
     .append("rect")
-    .attr("x", legendMargin.left + legendX)
-    .attr("y", legendMargin.top + legendY)
+    .attr("x", legendMargin.left + legendX - 8)
+    .attr("y", legendMargin.top)
     .attr("width", legendWidth) // todo calculate from label length?
     .attr("height", activeRegions.length * 20 + margin.top)
     .attr("id", "legendBG")
@@ -286,8 +446,15 @@ graph = () => {
     .text((d, i) => d.displayName);
 
   svg
+    .append("rect")
+    .attr("x", legendX - 3)
+    .attr("y", 30)
+    .attr("width", 270)
+    .attr("height", 20)
+    .attr("fill", "white");
+  svg
     .append("text") // XXX: for some reason this hides behind the graph? figure this out
-    .attr("x", 20)
+    .attr("x", legendX)
     .attr("y", 50)
     .text("Confirmed covid cases per 10,000 people");
 };
@@ -356,6 +523,7 @@ main = async () => {
   graph();
   buildTable();
   document.querySelector("#logscale").addEventListener("change", graph);
+  document.querySelector("#alignBaseline").addEventListener("change", graph);
 };
 
 window.addEventListener("DOMContentLoaded", (evt) => {
