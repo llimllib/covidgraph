@@ -314,13 +314,13 @@ graphBaselineAligned = () => {
     .attr("height", 20)
     .attr("fill", "white");
   svg
-    .append("text") // XXX: for some reason this hides behind the graph? figure this out
+    .append("text")
     .attr("x", 30)
     .attr("y", 50)
     .text("Confirmed covid cases per 10,000 people");
 
   svg
-    .append("text") // XXX: for some reason this hides behind the graph? figure this out
+    .append("text")
     .attr("x", width / 2)
     .attr("y", height + 40)
     .attr("text-anchor", "middle")
@@ -447,14 +447,14 @@ graphByDate = () => {
 
   svg
     .append("rect")
-    .attr("x", legendX - 3)
+    .attr("x", 27)
     .attr("y", 30)
     .attr("width", 270)
     .attr("height", 20)
     .attr("fill", "white");
   svg
-    .append("text") // XXX: for some reason this hides behind the graph? figure this out
-    .attr("x", legendX)
+    .append("text")
+    .attr("x", 30)
     .attr("y", 50)
     .text("Confirmed covid cases per 10,000 people");
 };
