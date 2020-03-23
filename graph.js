@@ -196,7 +196,15 @@ graph = () => {
 
   // Add y axis: the # of confirmed cases
   // https://observablehq.com/@d3/styled-axes
-  const y = d3.scaleLinear().domain([0, maxval]).range([height, 0]);
+  const y = document.querySelector("#logscale").checked
+    ? d3
+        .scaleLog()
+        .domain([0.001, maxval])
+        .range([height, 0])
+        .base(2)
+        .clamp(true)
+    : d3.scaleLinear().domain([0, maxval]).range([height, 0]);
+
   svg
     .append("g")
     .attr("transform", "translate(0, 0)")
@@ -329,6 +337,7 @@ main = async () => {
   await fetchData();
   graph();
   buildTable();
+  document.querySelector("#logscale").addEventListener("change", graph);
 };
 
 window.addEventListener("DOMContentLoaded", (evt) => {
