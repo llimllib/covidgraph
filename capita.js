@@ -47,7 +47,7 @@ capita = {
   "Vermont, US": 626604,
   "Virginia, US": 8256630,
   "Washington, US": 6985464,
-  "West Virginia": 1851420,
+  "West Virginia, US": 1851420,
   "Wisconsin, US": 5742117,
   "Wyoming, US": 579679,
   "Puerto Rico": 3583073,
