@@ -201,7 +201,7 @@ graph = () => {
   const y = document.querySelector("#logscale").checked
     ? d3
         .scaleLog()
-        .domain([0.01, maxval])
+        .domain([0.25, maxval])
         .range([height, 0])
         .base(2)
         // Not a great solution to the fact that our data set has zeroes, and

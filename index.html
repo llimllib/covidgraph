@@ -26,6 +26,16 @@ a:visited {
 .headerLI {
   height: 80px;
 }
+
+.settings {
+  float: right;
+  margin-top: 100px;
+}
+
+article {
+  width: 1000px;
+  margin: auto;
+}
 </style>
 <script src="https://d3js.org/d3.v5.js"></script>
 <script src="capita.js"></script>
@@ -33,10 +43,12 @@ a:visited {
 <body>
   <article>
     <div id="graphContainer">
+      <div class="settings">
+        <input type="checkbox" id="logscale" name="logscale">
+        <label for="logscale">use log scale</label>
+      </div>
     </div>
     <div>
-      <input type="checkbox" id="logscale" name="logscale">
-      <label for="logscale">use log scale</label>
     </div>
     <div id="regionSelector">
       <span id="countries">
