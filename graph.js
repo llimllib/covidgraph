@@ -193,7 +193,7 @@ graph = () => {
   svg
     .append("g")
     .attr("transform", "translate(0," + (height + 10) + ")")
-    .call(d3.axisBottom(x).ticks(15).tickSizeOuter(0).tickSizeInner(0))
+    .call(d3.axisBottom(x).ticks(8).tickSizeOuter(0).tickSizeInner(0))
     .call((g) => g.select(".domain").remove());
 
   // Add y axis: the # of confirmed cases
