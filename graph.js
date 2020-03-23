@@ -199,6 +199,56 @@ calcBaselineAlignedData = () => {
   });
 };
 
+drawLegend = (svg, margin, data) => {
+  const legendWidth = 140;
+  const x = 40;
+  const y = 10;
+  const legendMargin = { top: 100, left: 20 };
+  const legend = svg.append("g");
+
+  legend
+    .append("rect")
+    .attr("x", legendMargin.left + x - 8)
+    .attr("y", legendMargin.top)
+    .attr("width", legendWidth) // todo calculate from label length?
+    .attr("height", activeRegions.length * 20 + margin.top)
+    .attr("id", "legendBG")
+    .attr("fill", "white");
+
+  const keys = legend.selectAll("g").data(data).join("g");
+
+  keys
+    .append("circle")
+    .attr("cx", x + legendMargin.left)
+    .attr("cy", (d, i) => y + legendMargin.top + 20 * i - 2) // 2 is a fudge factor. Just looks better.
+    .attr("r", 4)
+    .style("fill", (d, i) => activeColors[i])
+    .attr("class", "legendCircle");
+
+  keys
+    .append("text")
+    .attr("x", x + legendMargin.left * 2)
+    .attr("y", (d, i) => y + legendMargin.top + 20 * i)
+    .style("fill", "black")
+    .attr("text-anchor", "left")
+    .attr("alignment-baseline", "middle")
+    .attr("class", "legendLabel")
+    .text((d, i) => d.displayName);
+
+  svg
+    .append("rect")
+    .attr("x", 27)
+    .attr("y", 30)
+    .attr("width", 270)
+    .attr("height", 20)
+    .attr("fill", "white");
+  svg
+    .append("text")
+    .attr("x", 30)
+    .attr("y", 50)
+    .text("Confirmed covid cases per 10,000 people");
+};
+
 // Create a graph where each state/country/we is graphed where day 0 is the day they had 10 cases
 graphBaselineAligned = () => {
   if (!baselineData) {
@@ -271,53 +321,7 @@ graphBaselineAligned = () => {
     .attr("class", "line")
     .attr("d", (d) => line(d.values));
 
-  const legendWidth = 140;
-  const legendX = 40;
-  const legendY = 10;
-  const legendMargin = { top: 100, left: 20 };
-  const legend = svg.append("g");
-
-  legend
-    .append("rect")
-    .attr("x", legendMargin.left + legendX - 8)
-    .attr("y", legendMargin.top)
-    .attr("width", legendWidth) // todo calculate from label length?
-    .attr("height", activeRegions.length * 20 + margin.top)
-    .attr("id", "legendBG")
-    .attr("fill", "white");
-
-  const keys = legend.selectAll("g").data(data).join("g");
-
-  keys
-    .append("circle")
-    .attr("cx", legendX + legendMargin.left)
-    .attr("cy", (d, i) => legendY + legendMargin.top + 20 * i - 2) // 2 is a fudge factor. Just looks better.
-    .attr("r", 4)
-    .style("fill", (d, i) => activeColors[i])
-    .attr("class", "legendCircle");
-
-  keys
-    .append("text")
-    .attr("x", legendX + legendMargin.left * 2)
-    .attr("y", (d, i) => legendY + legendMargin.top + 20 * i)
-    .style("fill", "black")
-    .attr("text-anchor", "left")
-    .attr("alignment-baseline", "middle")
-    .attr("class", "legendLabel")
-    .text((d, i) => d.displayName);
-
-  svg
-    .append("rect")
-    .attr("x", 27)
-    .attr("y", 30)
-    .attr("width", 270)
-    .attr("height", 20)
-    .attr("fill", "white");
-  svg
-    .append("text")
-    .attr("x", 30)
-    .attr("y", 50)
-    .text("Confirmed covid cases per 10,000 people");
+  drawLegend(svg, margin, data);
 
   svg
     .append("text")
@@ -410,53 +414,7 @@ graphByDate = () => {
     .attr("class", "line")
     .attr("d", (d) => line(d.values));
 
-  const legendWidth = 140;
-  const legendX = 40;
-  const legendY = 10;
-  const legendMargin = { top: 100, left: 20 };
-  const legend = svg.append("g");
-
-  legend
-    .append("rect")
-    .attr("x", legendMargin.left + legendX - 8)
-    .attr("y", legendMargin.top)
-    .attr("width", legendWidth) // todo calculate from label length?
-    .attr("height", activeRegions.length * 20 + margin.top)
-    .attr("id", "legendBG")
-    .attr("fill", "white");
-
-  const keys = legend.selectAll("g").data(data).join("g");
-
-  keys
-    .append("circle")
-    .attr("cx", legendX + legendMargin.left)
-    .attr("cy", (d, i) => legendY + legendMargin.top + 20 * i - 2) // 2 is a fudge factor. Just looks better.
-    .attr("r", 4)
-    .style("fill", (d, i) => activeColors[i])
-    .attr("class", "legendCircle");
-
-  keys
-    .append("text")
-    .attr("x", legendX + legendMargin.left * 2)
-    .attr("y", (d, i) => legendY + legendMargin.top + 20 * i)
-    .style("fill", "black")
-    .attr("text-anchor", "left")
-    .attr("alignment-baseline", "middle")
-    .attr("class", "legendLabel")
-    .text((d, i) => d.displayName);
-
-  svg
-    .append("rect")
-    .attr("x", 27)
-    .attr("y", 30)
-    .attr("width", 270)
-    .attr("height", 20)
-    .attr("fill", "white");
-  svg
-    .append("text")
-    .attr("x", 30)
-    .attr("y", 50)
-    .text("Confirmed covid cases per 10,000 people");
+  drawLegend(svg, margin, data);
 };
 
 addHandler = (name) => {
