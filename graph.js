@@ -5,6 +5,8 @@
 //   * configurable starting point?
 // TODO: option to align the epidemic starts in some way?
 //   * might be a new graph?
+// TODO: clamping the log scale to .01 is not a great solution; it messes up
+// the bottom of the graph
 
 // intentionally global. Let's let users play with it in the console if they want
 covidData = undefined;
@@ -199,9 +201,12 @@ graph = () => {
   const y = document.querySelector("#logscale").checked
     ? d3
         .scaleLog()
-        .domain([0.001, maxval])
+        .domain([0.01, maxval])
         .range([height, 0])
         .base(2)
+        // Not a great solution to the fact that our data set has zeroes, and
+        // zeroes aren't in the d3 log scale (My kingdom for log but with zero at
+        // zero!)
         .clamp(true)
     : d3.scaleLinear().domain([0, maxval]).range([height, 0]);
 
