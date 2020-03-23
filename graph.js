@@ -118,7 +118,8 @@ calcPerCapitaValues = (data) => {
 };
 
 fetchData = async () => {
-  let rawData = await d3.csv("./time_series_19-covid-Confirmed.csv", (row) => {
+  // intentionally update the rawData global
+  rawData = await d3.csv("./time_series_19-covid-Confirmed.csv", (row) => {
     ckey = "Country/Region";
     pkey = "Province/State";
 
