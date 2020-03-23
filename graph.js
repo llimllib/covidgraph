@@ -21,6 +21,14 @@ let activeRegions = [
   "Maine, US",
 ];
 
+// We want to keep colors consistent when changing the activeRegions map, so
+// maintain a parallel list of colors. When we remove elt `i` from
+// activeRegions, we must move elt `i` of activeColors to inactiveColors. When
+// we add to activeRegions, we must move a color from inactiveColors to
+// activeColors
+let activeColors = d3.schemeCategory10.slice(0, activeRegions.length);
+let inactiveColors = d3.schemeCategory10.slice(activeRegions.length);
+
 const startdt = new Date(2020, 2, 1);
 
 addChina = (data) => {
@@ -163,8 +171,10 @@ fetchData = async () => {
 };
 
 graph = () => {
-  const data = covidData.filter(
-    (d) => activeRegions.indexOf(d.displayName) != -1
+  // It's important to keep the order of the `activeRegions` map the same as
+  // the order of `data` so that we keep the color choices stable
+  const data = activeRegions.map((r) =>
+    covidData.find((d) => d.displayName == r)
   );
   const maxdt = d3.max(data[0].values, (d) => d.dt);
   const maxval = d3.max(data, (row) => d3.max(row.values.map((d) => d.value)));
@@ -217,7 +227,6 @@ graph = () => {
     )
     // move the tick labels to the left
     .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
-  // labels(svg, d3.schemeCategory10, activeRegions, 30, 30);
 
   const line = d3
     .line()
@@ -233,7 +242,7 @@ graph = () => {
     .data(data, (d) => d.values)
     .join("path")
     .attr("fill", "none")
-    .attr("stroke", (d, i) => d3.schemeCategory10[i])
+    .attr("stroke", (d, i) => activeColors[i])
     .attr("stroke-width", 1.5)
     .attr("class", "line")
     .attr("d", (d) => line(d.values));
@@ -260,7 +269,7 @@ graph = () => {
     .attr("cx", legendX + legendMargin.left)
     .attr("cy", (d, i) => legendY + legendMargin.top + 20 * i - 2) // 2 is a fudge factor. Just looks better.
     .attr("r", 4)
-    .style("fill", (d, i) => d3.schemeCategory10[i])
+    .style("fill", (d, i) => activeColors[i])
     .attr("class", "legendCircle");
 
   keys
@@ -285,6 +294,7 @@ addHandler = (name) => {
 
   if (activeRegions.length < 10) {
     activeRegions.push(name);
+    activeColors.push(inactiveColors.shift());
   }
   buildTable();
   graph();
@@ -293,7 +303,12 @@ addHandler = (name) => {
 removeHandler = (name) => {
   d3.event.preventDefault();
 
-  activeRegions = activeRegions.filter((x) => x != name);
+  // remove the region from activeRegions and remove its color from
+  // activeColors, and return it to the color pool
+  const idx = activeRegions.indexOf(name);
+  activeRegions.splice(idx, 1);
+  inactiveColors.push(activeColors[idx]);
+  activeColors.splice(idx, 1);
   buildTable();
   graph();
 };
