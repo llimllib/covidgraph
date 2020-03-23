@@ -5,6 +5,8 @@
 //   * configurable starting point?
 // TODO: option to align the epidemic starts in some way?
 //   * might be a new graph?
+// TODO: permalinks that allow sharing of a graph with a particular country set
+// or axis type
 
 // intentionally global. Let's let users play with it in the console if they want
 covidData = undefined;
