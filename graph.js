@@ -442,12 +442,12 @@ minidx = (arr) => {
 baselineMoved = (data, x, y) => {
   return () => {
     d3.event.preventDefault();
-    const dayn = Math.floor(x.invert(d3.event.layerX - 55)); // 55 by experiment. I dunno why.
-    const val = y.invert(d3.event.layerY - 32); // 32 same
+    const dayn = Math.floor(x.invert(d3.event.layerX));
+    const val = y.invert(d3.event.layerY - 32); // 32 works by experiment
     const values = data.map((d) => d.values[dayn]);
     const diffs = values.map((d) => Math.abs(d - val));
 
-    if (diffs.filter((d) => d < 0.75).length == 0) {
+    if (diffs.filter((d) => d < 1).length == 0) {
       d3.select("#hover").style("display", "none");
       return;
     }
@@ -492,7 +492,7 @@ dateMoved = (data, x, y) => {
 
     const diffs = choices.map((d) => Math.abs(val - d));
     // if no lines are close enough, hide the tooltip and exit
-    if (diffs.filter((d) => d < 0.75).length == 0) {
+    if (diffs.filter((d) => d < 1).length == 0) {
       d3.select("#hover").style("display", "none");
       return;
     }
