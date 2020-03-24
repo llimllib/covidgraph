@@ -1,10 +1,7 @@
-// TODO hover
-// TODO: better starting point? Mar 1 is pretty arbitrarily chosen as the date
-// Italy passed 20 cases
-//   * probably something like the earliest a selected country passed n cases?
-//   * configurable starting point?
+// TODO: configurable starting point?
 // TODO: permalinks that allow sharing of a graph with a particular country set
 // or axis type
+// TODO: plot new case rate?
 
 // intentionally global. Let's let users play with it in the console if they want
 covidData = undefined;
@@ -178,6 +175,7 @@ calcBaselineAlignedData = () => {
     newRow = { displayName: row.displayName };
     passedTen = false;
     values = [];
+    rawvalues = [];
     // For every column in the row, if it's a date column, check if it's >10.
     // As soon as we have one column that is, start saving every data point.
     // Assumes that the date columns remain sorted in ascending order.
@@ -191,10 +189,12 @@ calcBaselineAlignedData = () => {
         }
         if (passedTen) {
           values.push(percapita);
+          rawvalues.push(row[prop]);
         }
       }
     }
     newRow.values = values;
+    newRow.rawvalues = rawvalues;
     return newRow;
   });
 };
@@ -260,7 +260,6 @@ graphBaselineAligned = () => {
   const maxX = d3.max(data.map((d) => d.values.length));
   const maxY = d3.max(data.map((d) => d3.max(d.values)));
 
-  console.log(data);
   const margin = { top: 10, right: 30, bottom: 50, left: 60 },
     width = 800 - margin.left - margin.right,
     height = 600 - margin.top - margin.bottom;
@@ -272,7 +271,9 @@ graphBaselineAligned = () => {
     .select("#graphContainer")
     .append("svg")
     .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
+    .attr("height", height + margin.top + margin.bottom);
+
+  svg
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -301,6 +302,8 @@ graphBaselineAligned = () => {
     )
     // move the tick labels to the left
     .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
+
+  svg.on("mousemove", baselineMoved(data, x, y)).on("mouseleave", left);
 
   const line = d3
     .line()
@@ -331,12 +334,6 @@ graphBaselineAligned = () => {
     .text("Days since case rate exceeded .1 per 10k people");
 };
 
-graph = () => {
-  document.querySelector("#alignBaseline").checked
-    ? graphBaselineAligned()
-    : graphByDate();
-};
-
 graphByDate = () => {
   // It's important to keep the order of the `activeRegions` map the same as
   // the order of `data` so that we keep the color choices stable
@@ -345,8 +342,6 @@ graphByDate = () => {
   );
   const maxdt = d3.max(data[0].values, (d) => d.dt);
   const maxval = d3.max(data, (row) => d3.max(row.values.map((d) => d.value)));
-
-  console.log(data);
 
   const margin = { top: 10, right: 30, bottom: 30, left: 60 },
     width = 800 - margin.left - margin.right,
@@ -359,7 +354,9 @@ graphByDate = () => {
     .select("#graphContainer")
     .append("svg")
     .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
+    .attr("height", height + margin.top + margin.bottom);
+
+  svg
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -395,6 +392,8 @@ graphByDate = () => {
     // move the tick labels to the left
     .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
 
+  svg.on("mousemove", dateMoved(data, x, y)).on("mouseleave", left);
+
   const line = d3
     .line()
     .x((d) => x(d.dt))
@@ -415,6 +414,102 @@ graphByDate = () => {
     .attr("d", (d) => line(d.values));
 
   drawLegend(svg, margin, data);
+};
+
+left = () => {
+  d3.select("#hover").style("display", "none");
+};
+
+// given an array arr, return the index of the minimum element. Returns -1 if
+// every element of the array is NaN. I do not understand why d3.minIndex
+// (https://github.com/d3/d3-array#minIndex) is not available to me, but it
+// seems not to be.
+minidx = (arr) => {
+  if (!arr.length) {
+    return;
+  }
+  let min = Number.MAX_VALUE;
+  let minidx = -1;
+  for (let idx = 0; idx < arr.length; idx++) {
+    if (!isNaN(arr[idx]) && arr[idx] < min) {
+      min = arr[idx];
+      minidx = idx;
+    }
+  }
+  return minidx;
+};
+
+baselineMoved = (data, x, y) => {
+  return () => {
+    d3.event.preventDefault();
+    const dayn = Math.floor(x.invert(d3.event.layerX - 55)); // 55 by experiment. I dunno why.
+    const val = y.invert(d3.event.layerY - 32); // 32 same
+    const values = data.map((d) => d.values[dayn]);
+    const diffs = values.map((d) => Math.abs(d - val));
+
+    if (diffs.filter((d) => d < 0.75).length == 0) {
+      d3.select("#hover").style("display", "none");
+      return;
+    }
+
+    // find the closest line and show the tooltip
+    const dataidx = minidx(diffs);
+    d3
+      .select("#hover")
+      .style("display", "block")
+      .style("left", d3.event.pageX + 10 + "px")
+      .style("top", d3.event.pageY + "px").html(`<strong>${
+      data[dataidx].displayName
+    }</strong><br>
+Day number: ${dayn}<br>
+Cases: ${data[dataidx].rawvalues[dayn]}<br>
+Per Capita: ${values[dataidx].toFixed(2)}`);
+  };
+};
+
+dateMoved = (data, x, y) => {
+  return () => {
+    d3.event.preventDefault();
+    const dt = x.invert(d3.event.layerX - 30); // 30 is margin.left
+    const dtprop = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getYear() - 100}`;
+    const val = y.invert(d3.event.layerY - 30); // I don't understand why 30 is right
+
+    let choices = undefined;
+    try {
+      // for each line, find the value at the point that matches the date of the
+      // users' pointer
+      choices = data.map(
+        (d) =>
+          d.values.find(
+            (v) =>
+              v.dt.getMonth() == dt.getMonth() && v.dt.getDate() == dt.getDate()
+          ).value
+      );
+    } catch {
+      d3.select("#hover").style("display", "none");
+      return;
+    }
+
+    const diffs = choices.map((d) => Math.abs(val - d));
+    // if no lines are close enough, hide the tooltip and exit
+    if (diffs.filter((d) => d < 0.75).length == 0) {
+      d3.select("#hover").style("display", "none");
+      return;
+    }
+
+    // find the closest line and show the tooltip
+    const dataidx = minidx(diffs);
+    d3
+      .select("#hover")
+      .style("display", "block")
+      .style("left", d3.event.pageX + 10 + "px")
+      .style("top", d3.event.pageY + "px").html(`<strong>${
+      data[dataidx].displayName
+    }</strong><br>
+Date: ${dt.toLocaleDateString()}<br>
+Cases: ${data[dataidx][dtprop]}<br>
+Per Capita: ${choices[dataidx].toFixed(2)}`);
+  };
 };
 
 addHandler = (name) => {
@@ -441,6 +536,12 @@ removeHandler = (name) => {
   graph();
 };
 
+graph = () => {
+  document.querySelector("#alignBaseline").checked
+    ? graphBaselineAligned()
+    : graphByDate();
+};
+
 buildTable = () => {
   const inactiveRegions = covidData
     .map((d) => d.displayName)
@@ -448,7 +549,7 @@ buildTable = () => {
 
   const inactiveCountries = inactiveRegions
     .filter((d) => d.indexOf(", US") == -1)
-    .slice(0, 40);
+    .slice(0, 55);
   const inactiveStates = inactiveRegions.filter((d) => d.indexOf(", US") != -1);
 
   d3.select("#countries ul")
