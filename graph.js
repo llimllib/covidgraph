@@ -470,9 +470,9 @@ Per Capita: ${values[dataidx].toFixed(2)}`);
 dateMoved = (data, x, y) => {
   return () => {
     d3.event.preventDefault();
-    const dt = x.invert(d3.event.layerX - 30); // 30 is margin.left
+    const dt = x.invert(d3.event.layerX);
     const dtprop = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getYear() - 100}`;
-    const val = y.invert(d3.event.layerY - 30); // I don't understand why 30 is right
+    const val = y.invert(d3.event.layerY - 30); // I don't understand why 30
 
     let choices = undefined;
     try {
