@@ -303,7 +303,7 @@ graphBaselineAligned = () => {
     // move the tick labels to the left
     .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
 
-  svg.on("mousemove", baselineMoved(data, x, y)).on("mouseleave", left);
+  svg.on("mousemove", baselineMoved(svg, data, x, y)).on("mouseleave", left);
 
   const line = d3
     .line()
@@ -392,7 +392,7 @@ graphByDate = () => {
     // move the tick labels to the left
     .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
 
-  svg.on("mousemove", dateMoved(data, x, y)).on("mouseleave", left);
+  svg.on("mousemove", dateMoved(svg, data, x, y)).on("mouseleave", left);
 
   const line = d3
     .line()
@@ -439,11 +439,12 @@ minidx = (arr) => {
   return minidx;
 };
 
-baselineMoved = (data, x, y) => {
+baselineMoved = (svg, data, xscale, yscale) => {
   return () => {
     d3.event.preventDefault();
-    const dayn = Math.floor(x.invert(d3.event.layerX));
-    const val = y.invert(d3.event.layerY - 32); // 32 works by experiment
+    const { x: x0, y: y0 } = svg.node().getBoundingClientRect();
+    const dayn = Math.floor(xscale.invert(d3.event.clientX - x0 + 20));
+    const val = yscale.invert(d3.event.clientY - y0);
     const values = data.map((d) => d.values[dayn]);
     const diffs = values.map((d) => Math.abs(d - val));
 
@@ -467,12 +468,13 @@ Per Capita: ${values[dataidx].toFixed(2)}`);
   };
 };
 
-dateMoved = (data, x, y) => {
+dateMoved = (svg, data, xscale, yscale) => {
   return () => {
     d3.event.preventDefault();
-    const dt = x.invert(d3.event.layerX);
+    const { x: x0, y: y0 } = svg.node().getBoundingClientRect();
+    const dt = xscale.invert(d3.event.clientX - x0 + 20);
     const dtprop = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getYear() - 100}`;
-    const val = y.invert(d3.event.layerY - 30); // I don't understand why 30
+    const val = yscale.invert(d3.event.clientY - y0);
 
     let choices = undefined;
     try {
