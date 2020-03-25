@@ -4,6 +4,65 @@ import glob
 import os
 import json
 
+us_states_and_territories = [
+    "Alabama",
+    "Alaska",
+    "Arizona",
+    "Arkansas",
+    "California",
+    "Colorado",
+    "Connecticut",
+    "Delaware",
+    "Florida",
+    "Georgia",
+    "Hawaii",
+    "Idaho",
+    "Illinois",
+    "Indiana",
+    "Iowa",
+    "Kansas",
+    "Kentucky",
+    "Louisiana",
+    "Maine",
+    "Maryland",
+    "Massachusetts",
+    "Michigan",
+    "Minnesota",
+    "Mississippi",
+    "Missouri",
+    "Montana",
+    "Nebraska",
+    "Nevada",
+    "New Hampshire",
+    "New Jersey",
+    "New Mexico",
+    "New York",
+    "North Carolina",
+    "North Dakota",
+    "Ohio",
+    "Oklahoma",
+    "Oregon",
+    "Pennsylvania",
+    "Rhode Island",
+    "South Carolina",
+    "South Dakota",
+    "Tennessee",
+    "Texas",
+    "Utah",
+    "Vermont",
+    "Virginia",
+    "Washington",
+    "West Virginia",
+    "Wisconsin",
+    "Wyoming",
+    "District of Columbia",
+    "Puerto Rico",
+    "Virgin Islands",
+    "Guam",
+    "American Samoa",
+    "Northern Mariana Islands",
+]
+
 
 def country(row):
     if "Country/Region" in row:
@@ -42,6 +101,9 @@ def process(data, daily, date):
             setcountry(row, "China")
 
         if state(row) and country(row) == "US":
+            # skip all regions that are not states or territories
+            if state(row) not in us_states_and_territories:
+                continue
             displayname = f"{state(row)}, {country(row)}"
         else:
             displayname = f"{country(row)}"
