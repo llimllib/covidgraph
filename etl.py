@@ -141,18 +141,38 @@ def process(data, daily, date):
 def main():
     datadir = "jhudata/csse_covid_19_data/csse_covid_19_daily_reports/"
     data = {}
+    dates = []
     # it's important to read this in sorted order
     for fname in list(sorted(glob.glob(datadir + "*.csv"))):
         with open(fname, encoding="utf-8-sig") as dailyfile:
             # Grab the date from the filename, like "03-24-2020", and append it
             # to the dates array
             date = fname.split("/")[-1].split(".")[0]
+            dates.append(date)
 
             daily = csv.DictReader(dailyfile)
             process(data, daily, date)
 
     for key in data:
         data[key]["displayName"] = key
+
+    for region in data.values():
+        try:
+            # if there are dates where we have data, but this region does not yet,
+            # prepend zeros so we have a data point for every date
+            region["confirmed"] = [0] * (len(dates) - len(region["dates"])) + region[
+                "confirmed"
+            ]
+            region["deaths"] = [0] * (len(dates) - len(region["dates"])) + region[
+                "deaths"
+            ]
+            region["recovered"] = [0] * (len(dates) - len(region["dates"])) + region[
+                "recovered"
+            ]
+            region["dates"] = dates
+        except:
+            print("failed: ", region)
+            raise
 
     json.dump(data, open("data.json", "w"), indent=2)
     # json.dump(data, open("data.json", "w"))
