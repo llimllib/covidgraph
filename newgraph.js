@@ -1,4 +1,3 @@
-// TODO: don't put same dates in for each data point
 // TODO: configurable starting point?
 // TODO: permalinks that allow sharing of a graph with a particular country set
 // or axis type
@@ -27,9 +26,6 @@ let activeRegions = [
 // activeColors
 let activeColors = d3.schemeCategory10.slice(0, activeRegions.length);
 let inactiveColors = d3.schemeCategory10.slice(activeRegions.length);
-
-// start at March 1
-const startdt = new Date(2020, 2, 1);
 
 fetchData = async () => {
   rawData = await d3.json("./data.json");
@@ -227,6 +223,8 @@ graphConfirmedByDate = () => {
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
   // Add X axis: the date
+  const dtparts = document.querySelector("#startdate").value.split("-");
+  const startdt = new Date(dtparts[0], dtparts[1] - 1, dtparts[2]);
   const x = d3.scaleTime().domain([startdt, maxdt]).range([0, width]);
   svg
     .append("g")
@@ -458,7 +456,17 @@ main = async () => {
   buildTable();
   graph();
   document.querySelector("#logscale").addEventListener("change", graph);
-  document.querySelector("#alignBaseline").addEventListener("change", graph);
+  document.querySelector("#alignBaseline").addEventListener("change", (evt) => {
+    if (evt.target.checked) {
+      d3.select("label[for=startdate").style("color", "lightgrey");
+      document.querySelector("#startdate").disabled = true;
+    } else {
+      d3.select("label[for=startdate").style("color", "black");
+      document.querySelector("#startdate").disabled = false;
+    }
+    graph();
+  });
+  document.querySelector("#startdate").addEventListener("change", graph);
 };
 
 window.addEventListener("DOMContentLoaded", (evt) => {
