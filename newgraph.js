@@ -1,4 +1,3 @@
-// TODO: configurable starting point?
 // TODO: permalinks that allow sharing of a graph with a particular country set
 // or axis type
 // TODO: plot new case rate?
