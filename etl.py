@@ -129,8 +129,9 @@ def process(data, daily, date):
 
     for name, today in dailydata.items():
         try:
-            data.setdefault(name, {}).setdefault("dates", []).append(date)
-            data[name].setdefault("confirmed", []).append(sum(today["confirmed"]))
+            data.setdefault(name, {}).setdefault("confirmed", []).append(
+                sum(today["confirmed"])
+            )
             data[name].setdefault("deaths", []).append(sum(today["deaths"]))
             data[name].setdefault("recovered", []).append(sum(today["recovered"]))
         except:
@@ -156,26 +157,20 @@ def main():
     for key in data:
         data[key]["displayName"] = key
 
+    envelope = {"dates": dates, "data": data}
     for region in data.values():
-        try:
-            # if there are dates where we have data, but this region does not yet,
-            # prepend zeros so we have a data point for every date
-            region["confirmed"] = [0] * (len(dates) - len(region["dates"])) + region[
-                "confirmed"
-            ]
-            region["deaths"] = [0] * (len(dates) - len(region["dates"])) + region[
-                "deaths"
-            ]
-            region["recovered"] = [0] * (len(dates) - len(region["dates"])) + region[
-                "recovered"
-            ]
-            region["dates"] = dates
-        except:
-            print("failed: ", region)
-            raise
+        # if there are dates where we have data, but this region does not yet,
+        # prepend zeros so we have a data point for every date
+        region["confirmed"] = [0] * (len(dates) - len(region["confirmed"])) + region[
+            "confirmed"
+        ]
+        region["deaths"] = [0] * (len(dates) - len(region["deaths"])) + region["deaths"]
+        region["recovered"] = [0] * (len(dates) - len(region["recovered"])) + region[
+            "recovered"
+        ]
 
-    json.dump(data, open("data.json", "w"), indent=2)
-    # json.dump(data, open("data.json", "w"))
+    # json.dump(envelope, open("data.json", "w"), indent=2)
+    json.dump(envelope, open("data.json", "w"))
 
 
 if __name__ == "__main__":

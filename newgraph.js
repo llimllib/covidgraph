@@ -32,17 +32,16 @@ const startdt = new Date(2020, 2, 1);
 
 fetchData = async () => {
   rawData = await d3.json("./data.json");
+  rawData.dates = rawData.dates.map(parseDate);
 
   // calculate per capita of confirmed cases
-  for (let [name, data] of Object.entries(rawData)) {
+  for (let [name, data] of Object.entries(rawData.data)) {
     if (capita.hasOwnProperty(name)) {
       data.confirmedPerCapita = [];
       data.confirmed.forEach((confirmed) => {
         data.confirmedPerCapita.push((confirmed / capita[name]) * 10000);
       });
     }
-
-    data.dates = data.dates.map(parseDate);
   }
 };
 
@@ -106,9 +105,9 @@ parseDate = (dt) => {
 };
 
 graphConfirmedByDate = () => {
-  const data = activeRegions.map((r) => rawData[r]);
-  const maxdt = d3.max(data.map((d) => d3.max(d.dates)));
-  const maxval = d3.max(data.map((d) => d3.max(d.confirmed)));
+  const data = activeRegions.map((r) => rawData.data[r]);
+  const maxdt = d3.max(rawData.dates);
+  const maxval = d3.max(data.map((d) => d3.max(d.confirmedPerCapita)));
 
   const margin = { top: 10, right: 30, bottom: 30, left: 60 },
     width = 800 - margin.left - margin.right,
@@ -176,14 +175,14 @@ graphConfirmedByDate = () => {
     .attr("stroke", (d, i) => activeColors[i])
     .attr("stroke-width", 1.5)
     .attr("class", "line")
-    .attr("d", (d) => line(d3.zip(d.dates, d.confirmed)));
+    .attr("d", (d) => line(d3.zip(rawData.dates, d.confirmedPerCapita)));
 
   drawLegend(svg, margin, data);
 };
 
 buildTable = () => {
   const inactiveRegions = d3
-    .keys(rawData)
+    .keys(rawData.data)
     .filter((d) => activeRegions.indexOf(d) == -1);
 
   const inactiveCountries = inactiveRegions
