@@ -154,7 +154,7 @@ capita = {
   Switzerland: 8586550,
   "Sierra Leone": 7901454,
   Togo: 7538000,
-  "Hong Kong (China)": 7500700,
+  "Hong Kong": 7500700,
   Paraguay: 7152703,
   Laos: 7123205,
   Bulgaria: 7000039,

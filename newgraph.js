@@ -1,11 +1,10 @@
-// TODO: sort countries/states by max per-capita (rn unsorted)
 // TODO: don't put same dates in for each data point
 // TODO: configurable starting point?
 // TODO: permalinks that allow sharing of a graph with a particular country set
 // or axis type
 // TODO: plot new case rate?
-// TODO: put actual date in baseline hove r
-// TODO: hide legend when it blocks lines (baseline && log graph)
+// TODO: put actual date in baseline hover
+// TODO: move legend when it blocks lines (baseline && log graph)
 //
 // intentionally global. Let's let users play with it in the console if they want
 rawData = undefined;
@@ -382,9 +381,23 @@ left = () => {
 };
 
 buildTable = () => {
+  // the regions we want to list must be present in the population data and
+  // have greater than 1m residents
   const inactiveRegions = d3
     .keys(rawData.data)
-    .filter((d) => activeRegions.indexOf(d) == -1);
+    .filter(
+      (d) =>
+        activeRegions.indexOf(d) == -1 &&
+        capita.hasOwnProperty(d) &&
+        capita[d] > 1000000
+    );
+
+  inactiveRegions.sort((a, b) =>
+    d3.max(rawData.data[a].confirmedPerCapita) <
+    d3.max(rawData.data[b].confirmedPerCapita)
+      ? 1
+      : -1
+  );
 
   const inactiveCountries = inactiveRegions
     .filter((d) => d.indexOf(", US") == -1)
