@@ -202,7 +202,7 @@ graphBaselineAligned = () => {
     .attr("x", width / 2)
     .attr("y", height + 40)
     .attr("text-anchor", "middle")
-    .text("Days since case rate exceeded .1 per 10k people");
+    .text("Days since case rate exceeded .25 per 10k people");
 };
 
 graphConfirmedByDate = () => {
