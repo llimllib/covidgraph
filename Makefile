@@ -1,6 +1,11 @@
 .PHONY: dl
 dl:
-	wget https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv -O time_series_19-covid-Confirmed.csv
+	-git clone --depth=1 git@github.com:CSSEGISandData/COVID-19.git jhudata
+	cd jhudata && git pull
+
+.PHONY: process
+process:
+	python etl.py
 
 .PHONY: publish
 publish:
