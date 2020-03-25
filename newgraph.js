@@ -4,6 +4,8 @@
 // TODO: permalinks that allow sharing of a graph with a particular country set
 // or axis type
 // TODO: plot new case rate?
+// TODO: put actual date in baseline hove r
+// TODO: hide legend when it blocks lines (baseline && log graph)
 //
 // intentionally global. Let's let users play with it in the console if they want
 rawData = undefined;
@@ -96,12 +98,111 @@ drawLegend = (svg, margin, data) => {
 };
 
 graph = () => {
-  graphConfirmedByDate();
+  document.querySelector("#alignBaseline").checked
+    ? graphBaselineAligned()
+    : graphConfirmedByDate();
 };
 
 parseDate = (dt) => {
   const parts = dt.split("-");
   return (dt = new Date(+parts[2], +parts[0] - 1, +parts[1]));
+};
+
+// return the index of the first item that is > min
+startidx = (arr, min) => {
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] > min) {
+      return i;
+    }
+  }
+  return -1;
+};
+
+graphBaselineAligned = () => {
+  const data = activeRegions.map((r) => rawData.data[r]);
+  // hang a baseline array off each data item
+  data.forEach(
+    (d, i) =>
+      (d.baseline = d.confirmedPerCapita.slice(
+        startidx(d.confirmedPerCapita, 0.25)
+      ))
+  );
+  const maxX = d3.max(data.map((b) => b.baseline.length));
+  const maxY = d3.max(data.map((b) => d3.max(b.baseline)));
+
+  const margin = { top: 10, right: 30, bottom: 50, left: 60 },
+    width = 800 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+
+  // clear the container
+  d3.select("#graphContainer svg").remove();
+
+  const svg = d3
+    .select("#graphContainer")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom);
+
+  svg
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  // Add X axis: the date
+  const x = d3.scaleLinear().domain([0, maxX]).range([0, width]);
+  svg
+    .append("g")
+    .attr("transform", "translate(0," + (height + 10) + ")")
+    .call(d3.axisBottom(x).ticks(8).tickSizeOuter(0).tickSizeInner(0))
+    .call((g) => g.select(".domain").remove());
+
+  // Add y axis: the # of confirmed cases
+  // https://observablehq.com/@d3/styled-axes
+  const y = document.querySelector("#logscale").checked
+    ? d3.scaleLog().domain([0.25, maxY]).range([height, 0]).base(2).clamp(true)
+    : d3.scaleLinear().domain([0, maxY]).range([height, 0]);
+
+  svg
+    .append("g")
+    .attr("transform", "translate(0, 0)")
+    .call(d3.axisRight(y).tickSize(width).ticks(10))
+    // remove the y axis bar
+    .call((g) => g.select(".domain").remove())
+    // make the tick lines translucent
+    .call((g) =>
+      g.selectAll(".tick:not(:first-of-type) line").attr("stroke-opacity", 0.2)
+    )
+    // move the tick labels to the left
+    .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
+
+  svg.on("mousemove", baselineMoved(svg, data, x, y)).on("mouseleave", left);
+
+  const line = d3
+    .line()
+    .x((d, i) => x(i))
+    .y((d) => y(d));
+
+  // for every state/nation, create a line
+  // example to follow: https://observablehq.com/@d3/index-chart
+  svg
+    .append("g")
+    .attr("class", "lines")
+    .selectAll("path")
+    .data(data.map((d) => d.baseline))
+    .join("path")
+    .attr("fill", "none")
+    .attr("stroke", (d, i) => activeColors[i])
+    .attr("stroke-width", 1.5)
+    .attr("class", "line")
+    .attr("d", (d) => line(d));
+
+  drawLegend(svg, margin, data);
+
+  svg
+    .append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 40)
+    .attr("text-anchor", "middle")
+    .text("Days since case rate exceeded .1 per 10k people");
 };
 
 graphConfirmedByDate = () => {
@@ -212,6 +313,39 @@ minidx = (arr) => {
   return minidx;
 };
 
+baselineMoved = (svg, data, xscale, yscale) => {
+  return () => {
+    d3.event.preventDefault();
+    const { x: x0, y: y0 } = svg.node().getBoundingClientRect();
+    const dayn = Math.round(xscale.invert(d3.event.clientX - x0));
+    const val = yscale.invert(d3.event.clientY - y0);
+    const diffs = data.map((d) => Math.abs(val - d.baseline[dayn]));
+
+    // if no lines are close enough, hide the tooltip and exit
+    if (diffs.filter((d) => d < 1).length == 0) {
+      d3.select("#hover").style("display", "none");
+      return;
+    }
+
+    // find the closest line and show the tooltip
+    const dataidx = minidx(diffs);
+    // the index of the data in the non-baseline arrays can be found by
+    // starting where the baseline does and adding dayn to it
+    const nonBaselineIdx =
+      data[dataidx].confirmed.length - data[dataidx].baseline.length + dayn;
+    d3
+      .select("#hover")
+      .style("display", "block")
+      .style("left", d3.event.pageX + 10 + "px")
+      .style("top", d3.event.pageY + "px").html(`<strong>${
+      data[dataidx].displayName
+    }</strong><br>
+Day number: ${dayn}<br>
+Cases: ${data[dataidx].confirmed[nonBaselineIdx]}<br>
+Per Capita: ${data[dataidx].confirmedPerCapita[nonBaselineIdx].toFixed(2)}`);
+  };
+};
+
 dateMoved = (svg, data, xscale, yscale) => {
   return () => {
     d3.event.preventDefault();
@@ -310,6 +444,8 @@ main = async () => {
   await fetchData();
   buildTable();
   graph();
+  document.querySelector("#logscale").addEventListener("change", graph);
+  document.querySelector("#alignBaseline").addEventListener("change", graph);
 };
 
 window.addEventListener("DOMContentLoaded", (evt) => {
