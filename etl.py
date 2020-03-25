@@ -151,6 +151,9 @@ def main():
             daily = csv.DictReader(dailyfile)
             process(data, daily, date)
 
+    for key in data:
+        data[key]["displayName"] = key
+
     json.dump(data, open("data.json", "w"), indent=2)
     # json.dump(data, open("data.json", "w"))
 
