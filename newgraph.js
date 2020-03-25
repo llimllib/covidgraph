@@ -158,6 +158,8 @@ graphConfirmedByDate = () => {
     // move the tick labels to the left
     .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
 
+  svg.on("mousemove", dateMoved(svg, data, x, y)).on("mouseleave", left);
+
   const line = d3
     .line()
     .x((d) => x(d[0]))
@@ -178,6 +180,71 @@ graphConfirmedByDate = () => {
     .attr("d", (d) => line(d3.zip(rawData.dates, d.confirmedPerCapita)));
 
   drawLegend(svg, margin, data);
+};
+
+// return the index of a given date
+dateidx = (dt) => {
+  for (let idx = 0; idx < rawData.dates.length; idx++) {
+    const d = rawData.dates[idx];
+    if (d.getMonth() == dt.getMonth() && d.getDate() == dt.getDate()) {
+      return idx;
+    }
+  }
+  return -1;
+};
+
+// given an array arr, return the index of the minimum element. Returns -1 if
+// every element of the array is NaN. I do not understand why d3.minIndex
+// (https://github.com/d3/d3-array#minIndex) is not available to me, but it
+// seems not to be.
+minidx = (arr) => {
+  if (!arr.length) {
+    return;
+  }
+  let min = Number.MAX_VALUE;
+  let minidx = -1;
+  for (let idx = 0; idx < arr.length; idx++) {
+    if (!isNaN(arr[idx]) && arr[idx] < min) {
+      min = arr[idx];
+      minidx = idx;
+    }
+  }
+  return minidx;
+};
+
+dateMoved = (svg, data, xscale, yscale) => {
+  return () => {
+    d3.event.preventDefault();
+    const { x: x0, y: y0 } = svg.node().getBoundingClientRect();
+    const dt = xscale.invert(d3.event.clientX - x0 + 20);
+    const val = yscale.invert(d3.event.clientY - y0);
+    const idx = dateidx(dt);
+    const choices = data.map((d) => d.confirmedPerCapita[idx]);
+    const diffs = choices.map((d) => Math.abs(val - d));
+
+    // if no lines are close enough, hide the tooltip and exit
+    if (diffs.filter((d) => d < 1).length == 0) {
+      d3.select("#hover").style("display", "none");
+      return;
+    }
+
+    // find the closest line and show the tooltip
+    const dataidx = minidx(diffs);
+    d3
+      .select("#hover")
+      .style("display", "block")
+      .style("left", d3.event.pageX + 10 + "px")
+      .style("top", d3.event.pageY + "px").html(`<strong>${
+      data[dataidx].displayName
+    }</strong><br>
+Date: ${dt.toLocaleDateString()}<br>
+Cases: ${data[dataidx].confirmed[idx]}<br>
+Per Capita: ${data[dataidx].confirmedPerCapita[idx].toFixed(2)}`);
+  };
+};
+
+left = () => {
+  d3.select("#hover").style("display", "none");
 };
 
 buildTable = () => {
