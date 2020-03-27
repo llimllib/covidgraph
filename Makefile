@@ -1,11 +1,11 @@
+.PHONY: process
+process: dl
+	python etl.py
+
 .PHONY: dl
 dl:
 	-git clone --depth=1 git@github.com:CSSEGISandData/COVID-19.git jhudata
 	cd jhudata && git pull
-
-.PHONY: process
-process:
-	python etl.py
 
 .PHONY: publish
 publish:
