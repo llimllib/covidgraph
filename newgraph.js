@@ -41,7 +41,7 @@ fetchData = async () => {
 
       data.deathsPerCapita = [];
       data.deaths.forEach((deaths) => {
-        data.deathsPerCapita.push((deaths / capita[name]) * 100000);
+        data.deathsPerCapita.push((deaths / capita[name]) * 1000000);
       });
     }
   }
@@ -100,7 +100,7 @@ drawLegend = (svg, margin, data) => {
   const title =
     plotType() == "confirmedPerCapita"
       ? "Confirmed covid cases per 10,000 people"
-      : "Covid deaths per 100,000 people";
+      : "Covid deaths per 1,000,000 people";
   svg.append("text").attr("x", 30).attr("y", 50).text(title);
 };
 
@@ -202,8 +202,8 @@ graphBaselineAligned = () => {
 
   const title =
     type == "confirmedPerCapita"
-      ? "Days since case rate exceeded .25 per 10k people"
-      : "Days since deaths exceeded .25 per 100k people";
+      ? "Days since case rate exceeded .25 per 10,000 people"
+      : "Days since deaths exceeded .25 per 1 million people";
   svg
     .append("text")
     .attr("x", width / 2)
