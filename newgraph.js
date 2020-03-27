@@ -3,6 +3,7 @@
 // TODO: plot new case rate?
 // TODO: put actual date in baseline hover
 // TODO: move legend when it blocks lines (baseline && log graph)
+// TODO: responsive layout
 //
 // intentionally global. Let's let users play with it in the console if they want
 rawData = undefined;
@@ -401,6 +402,11 @@ buildTable = () => {
     .slice(0, 55);
   const inactiveStates = inactiveRegions.filter((d) => d.indexOf(", US") != -1);
 
+  if (document.querySelector("#alphabetical").checked) {
+    inactiveCountries.sort((a, b) => (a < b ? -1 : 1));
+    inactiveStates.sort((a, b) => (a < b ? -1 : 1));
+  }
+
   d3.select("#countries ul")
     .selectAll("li.region")
     .data(inactiveCountries, (d) => d)
@@ -455,6 +461,9 @@ main = async () => {
   buildTable();
   graph();
   document.querySelector("#logscale").addEventListener("change", graph);
+  document
+    .querySelector("#alphabetical")
+    .addEventListener("change", buildTable);
   document.querySelector("#alignBaseline").addEventListener("change", (evt) => {
     if (evt.target.checked) {
       d3.select("label[for=startdate").style("color", "lightgrey");
@@ -466,6 +475,9 @@ main = async () => {
     graph();
   });
   document.querySelector("#startdate").addEventListener("change", graph);
+  document.querySelector("#datadt").innerText = d3
+    .max(rawData.dates)
+    .toLocaleDateString();
 };
 
 window.addEventListener("DOMContentLoaded", (evt) => {

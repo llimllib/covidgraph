@@ -27,9 +27,9 @@ a:visited {
   height: 80px;
 }
 
-.settings {
+.rightpanel {
   float: right;
-  margin-top: 100px;
+  margin-top: 20px;
   width: 200px;
 }
 
@@ -55,23 +55,40 @@ article {
   </div>
   <article>
     <div id="graphContainer">
-      <div class="settings">
-        <p><h3>Settings</h3></p>
-        <p>
-          <input type="checkbox" id="logscale" name="logscale">
-          <label for="logscale">use log scale</label>
-        </p>
-        <p>
-          <input type="checkbox" id="alignBaseline" name="alignBaseline">
-          <label for="alignBaseline">align to .25 person per 10k</label>
-        </p>
-        <p>
-          <label for="startdate">Start date:</label>
-          <input type="date" id="startdate" name="startdate"
-             value="2020-03-01"
-             pattern="\d{4}-\d{2}-\d{2}"
-             min="2020-01-22" max="2020-03-25">
-        </p>
+      <div class="rightpanel">
+        <div class="about">
+          <p>
+            <a href="https://github.com/CSSEGISandData/COVID-19/blob/master/csse_covid_19_data/">Data</a> as of <span id="datadt"></span>
+          </p>
+          <p>
+            <a href="https://github.com/llimllib/covidgraph">Code</a> by <a href="http://twitter.com/llimllib">@llimllib</a>
+          </p>
+          <p>
+            <a href="mailto:bill@billmill.org">Email me</a> with questions
+          </p>
+        </div>
+        <div class="settings">
+          <p><h3>Settings</h3></p>
+          <p>
+            <input type="checkbox" id="logscale" name="logscale">
+            <label for="logscale">use log scale</label>
+          </p>
+          <p>
+            <input type="checkbox" id="alignBaseline" name="alignBaseline">
+            <label for="alignBaseline">align to .25 person per 10k</label>
+          </p>
+          <p>
+            <input type="checkbox" id="alphabetical" name="alphabetical">
+            <label for="alphabetical">alphabetical order</label>
+          </p>
+          <p>
+            <label for="startdate">Start date:</label>
+            <input type="date" id="startdate" name="startdate"
+               value="2020-03-01"
+               pattern="\d{4}-\d{2}-\d{2}"
+               min="2020-01-22" max="2020-03-25">
+          </p>
+        </div>
       </div>
     </div>
     <div>
@@ -93,10 +110,6 @@ article {
         </ul>
       </span>
     </div>
-    <p>
-    <a href="https://github.com/CSSEGISandData/COVID-19/blob/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv">Source data</a>
-    <p>
-    <a href="https://github.com/llimllib/covidgraph">Source code</a>
   </article>
 </body>
 </html>
