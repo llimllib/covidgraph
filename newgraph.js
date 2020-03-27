@@ -38,8 +38,19 @@ fetchData = async () => {
       data.confirmed.forEach((confirmed) => {
         data.confirmedPerCapita.push((confirmed / capita[name]) * 10000);
       });
+
+      data.deathsPerCapita = [];
+      data.deaths.forEach((deaths) => {
+        data.deathsPerCapita.push((deaths / capita[name]) * 100000);
+      });
     }
   }
+};
+
+plotType = () => {
+  return document.querySelector("#plotType").value == "confirmed"
+    ? "confirmedPerCapita"
+    : "deathsPerCapita";
 };
 
 drawLegend = (svg, margin, data) => {
@@ -85,11 +96,12 @@ drawLegend = (svg, margin, data) => {
     .attr("width", 270)
     .attr("height", 20)
     .attr("fill", "white");
-  svg
-    .append("text")
-    .attr("x", 30)
-    .attr("y", 50)
-    .text("Confirmed covid cases per 10,000 people");
+
+  const title =
+    plotType() == "confirmedPerCapita"
+      ? "Confirmed covid cases per 10,000 people"
+      : "Covid deaths per 100,000 people";
+  svg.append("text").attr("x", 30).attr("y", 50).text(title);
 };
 
 graph = () => {
@@ -115,13 +127,9 @@ startidx = (arr, min) => {
 
 graphBaselineAligned = () => {
   const data = activeRegions.map((r) => rawData.data[r]);
+  const type = plotType();
   // hang a baseline array off each data item
-  data.forEach(
-    (d, i) =>
-      (d.baseline = d.confirmedPerCapita.slice(
-        startidx(d.confirmedPerCapita, 0.25)
-      ))
-  );
+  data.forEach((d, i) => (d.baseline = d[type].slice(startidx(d[type], 0.25))));
   const maxX = d3.max(data.map((b) => b.baseline.length));
   const maxY = d3.max(data.map((b) => d3.max(b.baseline)));
 
@@ -192,18 +200,23 @@ graphBaselineAligned = () => {
 
   drawLegend(svg, margin, data);
 
+  const title =
+    type == "confirmedPerCapita"
+      ? "Days since case rate exceeded .25 per 10k people"
+      : "Days since deaths exceeded .25 per 100k people";
   svg
     .append("text")
     .attr("x", width / 2)
     .attr("y", height + 40)
     .attr("text-anchor", "middle")
-    .text("Days since case rate exceeded .25 per 10k people");
+    .text(title);
 };
 
 graphConfirmedByDate = () => {
   const data = activeRegions.map((r) => rawData.data[r]);
   const maxdt = d3.max(rawData.dates);
-  const maxval = d3.max(data.map((d) => d3.max(d.confirmedPerCapita)));
+  const type = plotType();
+  const maxval = d3.max(data.map((d) => d3.max(d[type])));
 
   const margin = { top: 10, right: 30, bottom: 30, left: 60 },
     width = 800 - margin.left - margin.right,
@@ -275,7 +288,7 @@ graphConfirmedByDate = () => {
     .attr("stroke", (d, i) => activeColors[i])
     .attr("stroke-width", 1.5)
     .attr("class", "line")
-    .attr("d", (d) => line(d3.zip(rawData.dates, d.confirmedPerCapita)));
+    .attr("d", (d) => line(d3.zip(rawData.dates, d[type])));
 
   drawLegend(svg, margin, data);
 };
@@ -330,6 +343,7 @@ baselineMoved = (svg, data, xscale, yscale) => {
     // starting where the baseline does and adding dayn to it
     const nonBaselineIdx =
       data[dataidx].confirmed.length - data[dataidx].baseline.length + dayn;
+
     d3
       .select("#hover")
       .style("display", "block")
@@ -339,7 +353,8 @@ baselineMoved = (svg, data, xscale, yscale) => {
     }</strong><br>
 Day number: ${dayn}<br>
 Cases: ${data[dataidx].confirmed[nonBaselineIdx]}<br>
-Per Capita: ${data[dataidx].confirmedPerCapita[nonBaselineIdx].toFixed(2)}`);
+Deaths: ${data[dataidx].deaths[nonBaselineIdx]}<br>
+Per Capita: ${data[dataidx][plotType()][nonBaselineIdx].toFixed(2)}`);
   };
 };
 
@@ -350,7 +365,8 @@ dateMoved = (svg, data, xscale, yscale) => {
     const dt = xscale.invert(d3.event.clientX - x0 + 20);
     const val = yscale.invert(d3.event.clientY - y0);
     const idx = dateidx(dt);
-    const choices = data.map((d) => d.confirmedPerCapita[idx]);
+    const type = plotType();
+    const choices = data.map((d) => d[type][idx]);
     const diffs = choices.map((d) => Math.abs(val - d));
 
     // if no lines are close enough, hide the tooltip and exit
@@ -370,7 +386,8 @@ dateMoved = (svg, data, xscale, yscale) => {
     }</strong><br>
 Date: ${dt.toLocaleDateString()}<br>
 Cases: ${data[dataidx].confirmed[idx]}<br>
-Per Capita: ${data[dataidx].confirmedPerCapita[idx].toFixed(2)}`);
+Deaths: ${data[dataidx].deaths[idx]}<br>
+Per Capita: ${data[dataidx][type][idx].toFixed(2)}`);
   };
 };
 
@@ -390,11 +407,9 @@ buildTable = () => {
         capita[d] > 1000000
     );
 
+  const type = plotType();
   inactiveRegions.sort((a, b) =>
-    d3.max(rawData.data[a].confirmedPerCapita) <
-    d3.max(rawData.data[b].confirmedPerCapita)
-      ? 1
-      : -1
+    d3.max(rawData.data[a][type]) < d3.max(rawData.data[b][type]) ? 1 : -1
   );
 
   const inactiveCountries = inactiveRegions
@@ -478,6 +493,7 @@ main = async () => {
   document.querySelector("#datadt").innerText = d3
     .max(rawData.dates)
     .toLocaleDateString();
+  document.querySelector("#plotType").addEventListener("change", graph);
 };
 
 window.addEventListener("DOMContentLoaded", (evt) => {

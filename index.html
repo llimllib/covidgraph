@@ -85,12 +85,18 @@ label#alphaLabel:hover::after {
         <div class="settings">
           <p><h3>Settings</h3></p>
           <p>
+            <select id="plotType" name="plotType">
+              <option value="confirmed">Confirmed cases</option>
+              <option value="deaths">Deaths</option>
+            </select>
+          </p>
+          <p>
             <input type="checkbox" id="logscale" name="logscale">
             <label for="logscale">use log scale</label>
           </p>
           <p>
             <input type="checkbox" id="alignBaseline" name="alignBaseline">
-            <label for="alignBaseline">align to .25 person per 10k</label>
+            <label for="alignBaseline">align regions</label>
           </p>
           <p>
             <input type="checkbox" id="alphabetical" name="alphabetical">
