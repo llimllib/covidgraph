@@ -45,6 +45,21 @@ article {
   padding: 5px;
   border: 1px solid black;
 }
+label#alphaLabel {
+  position: relative;
+  border-bottom: 1px dotted black;
+  cursor: help;
+}
+label#alphaLabel:hover::after {
+  content: "By default, items are sorted by maximum per capita cases";
+  position: absolute ;
+  background-color: white;
+  top: 1.1em ;
+  left: 1em ;
+  z-index: 1 ;
+  padding: 5px;
+  border: 1px solid black;
+}
 </style>
 <script src="https://d3js.org/d3.v5.js"></script>
 <script src="capita.js"></script>
@@ -79,7 +94,7 @@ article {
           </p>
           <p>
             <input type="checkbox" id="alphabetical" name="alphabetical">
-            <label for="alphabetical">alphabetical order</label>
+            <label for="alphabetical" id="alphaLabel">alphabetical order</label>
           </p>
           <p>
             <label for="startdate">Start date:</label>
