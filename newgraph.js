@@ -1,6 +1,8 @@
 // TODO: permalinks that allow sharing of a graph with a particular country set
 // or axis type
 // TODO: plot new case rate?
+//   * add x label
+//   * add smoothing option?
 // TODO: put actual date in baseline hover
 // TODO: move legend when it blocks lines (baseline && log graph)
 // TODO: responsive layout
@@ -34,7 +36,7 @@ async function fetchData() {
 
   // calculate per capita of confirmed cases
   for (let [name, data] of Object.entries(rawData.data)) {
-    if (capita.hasOwnProperty("bar")) {
+    if (capita.hasOwnProperty(name)) {
       data.confirmedPerCapita = [];
       data.confirmed.forEach((confirmed) => {
         data.confirmedPerCapita.push((confirmed / capita[name]) * 10000);
@@ -132,22 +134,15 @@ function graphDifference() {
   // hang a difference array off each data item
   data.forEach((d) => {
     d.difference = d[type].map((x, i) => d[type][i + 1] - x);
-    console.log(d.difference);
     // the last item is always NaN, pop it.
     d.difference.pop();
-    console.log(d.difference);
   });
   // find the number of days to slice off the front of the difference arrays,
   // as the first day where any of them had a |difference| > 10 (is 10 a
   // sensible number?)
-  console.log(data);
-  const sliceidx = d3.min(
-    data.map((d) => firstidx(d.difference, (x) => x > 10))
-  );
-  console.log(data);
+  const sliceidx = d3.min(data.map((d) => startidx(d.difference, 10)));
   // then slice off [0, sliceidx) for each difference array
   data.forEach((d) => (d.difference = d.difference.slice(sliceidx)));
-  console.log(data);
   const maxX = d3.max(data.map((b) => b.difference.length));
   const maxY = d3.max(data.map((b) => d3.max(b.difference)));
   const minY = d3.min(data.map((b) => d3.min(b.difference)));
@@ -424,16 +419,6 @@ function minidx(arr) {
   return minidx;
 }
 
-// return the index of the first element for which `f` returns true-ish
-function firstidx(arr, f) {
-  for (let idx = 0; idx < arr.length; arr++) {
-    if (f(arr[idx])) {
-      return idx;
-    }
-  }
-  return -1;
-}
-
 function differenceMoved(svg, data, xscale, yscale) {
   return () => {
     d3.event.preventDefault();
@@ -451,6 +436,13 @@ function differenceMoved(svg, data, xscale, yscale) {
 
     // find the closest line and show the tooltip
     const dataidx = minidx(diffs);
+    // the index of the data in the non-difference arrays can be found by
+    // starting where the difference does and adding dayn to it
+    const nonDifferenceIdx =
+      data[dataidx].confirmed.length -
+      data[dataidx].difference.length +
+      dayn -
+      1;
     d3
       .select("#hover")
       .style("display", "block")
@@ -459,7 +451,8 @@ function differenceMoved(svg, data, xscale, yscale) {
       data[dataidx].displayName
     }</strong><br>
 Day ${dayn} -> Day ${dayn + 1}: ${
-      data[dataidx][type][dayn + 1] - data[dataidx][type][dayn]
+      data[dataidx][type][nonDifferenceIdx + 1] -
+      data[dataidx][type][nonDifferenceIdx]
     }<br>`);
   };
 }
