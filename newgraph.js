@@ -53,7 +53,7 @@ plotType = () => {
     : "deathsPerCapita";
 };
 
-drawLegend = (svg, margin, data) => {
+drawLegend = (svg, margin, data, title) => {
   const legendWidth = 140;
   const x = 40;
   const y = 10;
@@ -97,17 +97,17 @@ drawLegend = (svg, margin, data) => {
     .attr("height", 20)
     .attr("fill", "white");
 
-  const title =
-    plotType() == "confirmedPerCapita"
-      ? "Confirmed covid cases per 10,000 people"
-      : "Covid deaths per 1,000,000 people";
   svg.append("text").attr("x", 30).attr("y", 50).text(title);
 };
 
 graph = () => {
-  document.querySelector("#alignBaseline").checked
-    ? graphBaselineAligned()
-    : graphConfirmedByDate();
+  if (document.querySelector("#alignBaseline").checked) {
+    graphBaselineAligned();
+  } else if (document.querySelector("#difference").checked) {
+    graphDifference();
+  } else {
+    graphConfirmedByDate();
+  }
 };
 
 parseDate = (dt) => {
@@ -123,6 +123,95 @@ startidx = (arr, min) => {
     }
   }
   return -1;
+};
+
+graphDifference = () => {
+  const data = activeRegions.map((r) => rawData.data[r]);
+  const type = document.querySelector("#plotType").value;
+  // hang a difference array off each data item
+  data.forEach((d, i) => {
+    d.difference = d[type].map((x, i) => d[type][i + 1] - x);
+    // the last item is always NaN, pop it. XXX: can this fail if the array
+    // only has one element, or something?
+    d.difference.pop();
+  });
+  console.log(data);
+  const maxX = d3.max(data.map((b) => b.difference.length));
+  const maxY = d3.max(data.map((b) => d3.max(b.difference)));
+  const minY = d3.min(data.map((b) => d3.min(b.difference)));
+
+  const margin = { top: 10, right: 30, bottom: 30, left: 60 },
+    width = 800 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+
+  // clear the container
+  d3.select("#graphContainer svg").remove();
+
+  const svg = d3
+    .select("#graphContainer")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom);
+
+  svg
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  // Add X axis: the date
+  const x = d3.scaleLinear().domain([0, maxX]).range([0, width]);
+  svg
+    .append("g")
+    .attr("transform", "translate(0," + (height + 10) + ")")
+    .call(d3.axisBottom(x).ticks(8).tickSizeOuter(0).tickSizeInner(0))
+    .call((g) => g.select(".domain").remove());
+
+  // Add y axis: the # of confirmed cases
+  // https://observablehq.com/@d3/styled-axes
+  const y = document.querySelector("#logscale").checked
+    ? d3.scaleSymlog().domain([minY, maxY]).range([height, 0])
+    : d3.scaleLinear().domain([minY, maxY]).range([height, 0]);
+
+  svg
+    .append("g")
+    .attr("transform", "translate(0, 0)")
+    .call(d3.axisRight(y).tickSize(width).ticks(10))
+    // remove the y axis bar
+    .call((g) => g.select(".domain").remove())
+    // make the tick lines translucent
+    .call((g) =>
+      g.selectAll(".tick:not(:first-of-type) line").attr("stroke-opacity", 0.2)
+    )
+    // move the tick labels to the left
+    .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
+
+  // TODO: replace with a move function
+  svg.on("mousemove", differenceMoved(svg, data, x, y)).on("mouseleave", left);
+
+  const line = d3
+    .line()
+    .x((d, i) => x(i))
+    .y((d) => y(d));
+
+  // for every state/nation, create a line
+  // example to follow: https://observablehq.com/@d3/index-chart
+  svg
+    .append("g")
+    .attr("class", "lines")
+    .selectAll("path")
+    .data(data.map((d) => d.difference))
+    .join("path")
+    .attr("fill", "none")
+    .attr("stroke", (d, i) => activeColors[i])
+    .attr("stroke-width", 1.5)
+    .attr("class", "line")
+    .attr("d", (d) => line(d));
+
+  const title =
+    type == "confirmed"
+      ? "Difference in Confirmed Cases"
+      : "Difference in Confirmed Deaths";
+
+  drawLegend(svg, margin, data, title);
 };
 
 graphBaselineAligned = () => {
@@ -323,6 +412,36 @@ minidx = (arr) => {
   return minidx;
 };
 
+differenceMoved = (svg, data, xscale, yscale) => {
+  return () => {
+    d3.event.preventDefault();
+    const { x: x0, y: y0 } = svg.node().getBoundingClientRect();
+    const dayn = Math.round(xscale.invert(d3.event.clientX - x0));
+    const val = yscale.invert(d3.event.clientY - y0);
+    const diffs = data.map((d) => Math.abs(val - d.difference[dayn]));
+    const type = document.querySelector("#plotType").value;
+
+    // if no lines are close enough, hide the tooltip and exit
+    if (diffs.filter((d) => d < 1000).length == 0) {
+      d3.select("#hover").style("display", "none");
+      return;
+    }
+
+    // find the closest line and show the tooltip
+    const dataidx = minidx(diffs);
+    d3
+      .select("#hover")
+      .style("display", "block")
+      .style("left", d3.event.pageX + 10 + "px")
+      .style("top", d3.event.pageY + "px").html(`<strong>${
+      data[dataidx].displayName
+    }</strong><br>
+Day ${dayn} -> Day ${dayn + 1}: ${
+      data[dataidx][type][dayn + 1] - data[dataidx][type][dayn]
+    }<br>`);
+  };
+};
+
 baselineMoved = (svg, data, xscale, yscale) => {
   return () => {
     d3.event.preventDefault();
@@ -494,6 +613,7 @@ main = async () => {
     .max(rawData.dates)
     .toLocaleDateString();
   document.querySelector("#plotType").addEventListener("change", graph);
+  document.querySelector("#difference").addEventListener("change", graph);
 };
 
 window.addEventListener("DOMContentLoaded", (evt) => {
