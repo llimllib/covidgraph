@@ -6,6 +6,7 @@
 // TODO: responsive layout
 //
 // intentionally global. Let's let users play with it in the console if they want
+/*global rawData:writeable d3 capita*/
 rawData = undefined;
 
 // activeRegions must match the name of a rawData key
@@ -27,13 +28,13 @@ let activeRegions = [
 let activeColors = d3.schemeCategory10.slice(0, activeRegions.length);
 let inactiveColors = d3.schemeCategory10.slice(activeRegions.length);
 
-fetchData = async () => {
+async function fetchData() {
   rawData = await d3.json("./data.json");
   rawData.dates = rawData.dates.map(parseDate);
 
   // calculate per capita of confirmed cases
   for (let [name, data] of Object.entries(rawData.data)) {
-    if (capita.hasOwnProperty(name)) {
+    if (capita.hasOwnProperty("bar")) {
       data.confirmedPerCapita = [];
       data.confirmed.forEach((confirmed) => {
         data.confirmedPerCapita.push((confirmed / capita[name]) * 10000);
@@ -45,15 +46,15 @@ fetchData = async () => {
       });
     }
   }
-};
+}
 
-plotType = () => {
+function plotType() {
   return document.querySelector("#plotType").value == "confirmed"
     ? "confirmedPerCapita"
     : "deathsPerCapita";
-};
+}
 
-drawLegend = (svg, margin, data, title) => {
+function drawLegend(svg, margin, data, title) {
   const legendWidth = 140;
   const x = 40;
   const y = 10;
@@ -98,9 +99,9 @@ drawLegend = (svg, margin, data, title) => {
     .attr("fill", "white");
 
   svg.append("text").attr("x", 30).attr("y", 50).text(title);
-};
+}
 
-graph = () => {
+function graph() {
   if (document.querySelector("#alignBaseline").checked) {
     graphBaselineAligned();
   } else if (document.querySelector("#difference").checked) {
@@ -108,33 +109,44 @@ graph = () => {
   } else {
     graphConfirmedByDate();
   }
-};
+}
 
-parseDate = (dt) => {
+function parseDate(dt) {
   const parts = dt.split("-");
   return (dt = new Date(+parts[2], +parts[0] - 1, +parts[1]));
-};
+}
 
 // return the index of the first item that is > min
-startidx = (arr, min) => {
+function startidx(arr, min) {
   for (let i = 0; i < arr.length; i++) {
     if (arr[i] > min) {
       return i;
     }
   }
   return -1;
-};
+}
 
-graphDifference = () => {
+function graphDifference() {
   const data = activeRegions.map((r) => rawData.data[r]);
   const type = document.querySelector("#plotType").value;
   // hang a difference array off each data item
-  data.forEach((d, i) => {
+  data.forEach((d) => {
     d.difference = d[type].map((x, i) => d[type][i + 1] - x);
-    // the last item is always NaN, pop it. XXX: can this fail if the array
-    // only has one element, or something?
+    console.log(d.difference);
+    // the last item is always NaN, pop it.
     d.difference.pop();
+    console.log(d.difference);
   });
+  // find the number of days to slice off the front of the difference arrays,
+  // as the first day where any of them had a |difference| > 10 (is 10 a
+  // sensible number?)
+  console.log(data);
+  const sliceidx = d3.min(
+    data.map((d) => firstidx(d.difference, (x) => x > 10))
+  );
+  console.log(data);
+  // then slice off [0, sliceidx) for each difference array
+  data.forEach((d) => (d.difference = d.difference.slice(sliceidx)));
   console.log(data);
   const maxX = d3.max(data.map((b) => b.difference.length));
   const maxY = d3.max(data.map((b) => d3.max(b.difference)));
@@ -212,13 +224,13 @@ graphDifference = () => {
       : "Difference in Confirmed Deaths";
 
   drawLegend(svg, margin, data, title);
-};
+}
 
-graphBaselineAligned = () => {
+function graphBaselineAligned() {
   const data = activeRegions.map((r) => rawData.data[r]);
   const type = plotType();
   // hang a baseline array off each data item
-  data.forEach((d, i) => (d.baseline = d[type].slice(startidx(d[type], 0.25))));
+  data.forEach((d) => (d.baseline = d[type].slice(startidx(d[type], 0.25))));
   const maxX = d3.max(data.map((b) => b.baseline.length));
   const maxY = d3.max(data.map((b) => d3.max(b.baseline)));
 
@@ -299,9 +311,9 @@ graphBaselineAligned = () => {
     .attr("y", height + 40)
     .attr("text-anchor", "middle")
     .text(title);
-};
+}
 
-graphConfirmedByDate = () => {
+function graphConfirmedByDate() {
   const data = activeRegions.map((r) => rawData.data[r]);
   const maxdt = d3.max(rawData.dates);
   const type = plotType();
@@ -380,10 +392,10 @@ graphConfirmedByDate = () => {
     .attr("d", (d) => line(d3.zip(rawData.dates, d[type])));
 
   drawLegend(svg, margin, data);
-};
+}
 
 // return the index of a given date
-dateidx = (dt) => {
+function dateidx(dt) {
   for (let idx = 0; idx < rawData.dates.length; idx++) {
     const d = rawData.dates[idx];
     if (d.getMonth() == dt.getMonth() && d.getDate() == dt.getDate()) {
@@ -391,13 +403,13 @@ dateidx = (dt) => {
     }
   }
   return -1;
-};
+}
 
 // given an array arr, return the index of the minimum element. Returns -1 if
 // every element of the array is NaN. I do not understand why d3.minIndex
 // (https://github.com/d3/d3-array#minIndex) is not available to me, but it
 // seems not to be.
-minidx = (arr) => {
+function minidx(arr) {
   if (!arr.length) {
     return;
   }
@@ -410,9 +422,19 @@ minidx = (arr) => {
     }
   }
   return minidx;
-};
+}
 
-differenceMoved = (svg, data, xscale, yscale) => {
+// return the index of the first element for which `f` returns true-ish
+function firstidx(arr, f) {
+  for (let idx = 0; idx < arr.length; arr++) {
+    if (f(arr[idx])) {
+      return idx;
+    }
+  }
+  return -1;
+}
+
+function differenceMoved(svg, data, xscale, yscale) {
   return () => {
     d3.event.preventDefault();
     const { x: x0, y: y0 } = svg.node().getBoundingClientRect();
@@ -440,9 +462,9 @@ Day ${dayn} -> Day ${dayn + 1}: ${
       data[dataidx][type][dayn + 1] - data[dataidx][type][dayn]
     }<br>`);
   };
-};
+}
 
-baselineMoved = (svg, data, xscale, yscale) => {
+function baselineMoved(svg, data, xscale, yscale) {
   return () => {
     d3.event.preventDefault();
     const { x: x0, y: y0 } = svg.node().getBoundingClientRect();
@@ -475,9 +497,9 @@ Cases: ${data[dataidx].confirmed[nonBaselineIdx]}<br>
 Deaths: ${data[dataidx].deaths[nonBaselineIdx]}<br>
 Per Capita: ${data[dataidx][plotType()][nonBaselineIdx].toFixed(2)}`);
   };
-};
+}
 
-dateMoved = (svg, data, xscale, yscale) => {
+function dateMoved(svg, data, xscale, yscale) {
   return () => {
     d3.event.preventDefault();
     const { x: x0, y: y0 } = svg.node().getBoundingClientRect();
@@ -508,13 +530,13 @@ Cases: ${data[dataidx].confirmed[idx]}<br>
 Deaths: ${data[dataidx].deaths[idx]}<br>
 Per Capita: ${data[dataidx][type][idx].toFixed(2)}`);
   };
-};
+}
 
-left = () => {
+function left() {
   d3.select("#hover").style("display", "none");
-};
+}
 
-buildTable = () => {
+function buildTable() {
   // the regions we want to list must be present in the population data and
   // have greater than 1m residents
   const inactiveRegions = d3
@@ -564,9 +586,9 @@ buildTable = () => {
     .attr("class", "activeRegion")
     .on("click", removeHandler)
     .html((d) => `<a href="#" class="rem" data-name="${d}">${d} <<</a>`);
-};
+}
 
-addHandler = (name) => {
+function addHandler(name) {
   d3.event.preventDefault();
 
   if (activeRegions.length < 10) {
@@ -575,9 +597,9 @@ addHandler = (name) => {
   }
   buildTable();
   graph();
-};
+}
 
-removeHandler = (name) => {
+function removeHandler(name) {
   d3.event.preventDefault();
 
   // remove the region from activeRegions and remove its color from
@@ -588,9 +610,9 @@ removeHandler = (name) => {
   activeColors.splice(idx, 1);
   buildTable();
   graph();
-};
+}
 
-main = async () => {
+async function main() {
   await fetchData();
   buildTable();
   graph();
@@ -614,8 +636,8 @@ main = async () => {
     .toLocaleDateString();
   document.querySelector("#plotType").addEventListener("change", graph);
   document.querySelector("#difference").addEventListener("change", graph);
-};
+}
 
-window.addEventListener("DOMContentLoaded", (evt) => {
+window.addEventListener("DOMContentLoaded", () => {
   main();
 });
