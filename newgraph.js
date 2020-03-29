@@ -404,7 +404,7 @@ buildTable = () => {
       (d) =>
         activeRegions.indexOf(d) == -1 &&
         capita.hasOwnProperty(d) &&
-        capita[d] > 1000000
+        capita[d] > 640000
     );
 
   const type = plotType();
