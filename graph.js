@@ -299,18 +299,12 @@ function graphBaselineAligned() {
     .attr("class", "line")
     .attr("d", (d) => line(d));
 
-  drawLegend(svg, margin, data);
-
   const title =
     type == "confirmedPerCapita"
       ? "Days since case rate exceeded .25 per 10,000 people"
       : "Days since deaths exceeded .25 per 1 million people";
-  svg
-    .append("text")
-    .attr("x", width / 2)
-    .attr("y", height + 40)
-    .attr("text-anchor", "middle")
-    .text(title);
+
+  drawLegend(svg, margin, data, title);
 }
 
 function graphConfirmedByDate() {
@@ -391,7 +385,12 @@ function graphConfirmedByDate() {
     .attr("class", "line")
     .attr("d", (d) => line(d3.zip(rawData.dates, d[type])));
 
-  drawLegend(svg, margin, data);
+  const title =
+    type == "confirmedPerCapita"
+      ? "Confirmed Cases per 10,000 residents"
+      : "Deaths per million residents";
+
+  drawLegend(svg, margin, data, title);
 }
 
 // return the index of a given date
