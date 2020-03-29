@@ -1,14 +1,19 @@
-// TODO: configurable starting point?
 // TODO: permalinks that allow sharing of a graph with a particular country set
 // or axis type
 // TODO: plot new case rate?
-
+//   * add smoothing option?
+//   * disable the start date
+//   * disable align baselines
+//     * then figure out how to make it work!
+// TODO: put actual date in baseline hover
+// TODO: move legend when it blocks lines (baseline && log graph)
+// TODO: responsive layout
+//
 // intentionally global. Let's let users play with it in the console if they want
-covidData = undefined;
+/*global rawData:writeable d3 capita*/
 rawData = undefined;
-baselineData = undefined;
 
-// activeRegions must match the displayName of a covidData row
+// activeRegions must match the name of a rawData key
 let activeRegions = [
   "Italy",
   "New York, US",
@@ -27,179 +32,33 @@ let activeRegions = [
 let activeColors = d3.schemeCategory10.slice(0, activeRegions.length);
 let inactiveColors = d3.schemeCategory10.slice(activeRegions.length);
 
-const startdt = new Date(2020, 2, 1);
+async function fetchData() {
+  rawData = await d3.json("./data.json");
+  rawData.dates = rawData.dates.map(parseDate);
 
-addChina = (data) => {
-  newRow = {
-    name: "China",
-    displayName: "China",
-    "Country/Region": "China",
-  };
+  // calculate per capita of confirmed cases
+  for (let [name, data] of Object.entries(rawData.data)) {
+    if (capita.hasOwnProperty(name)) {
+      data.confirmedPerCapita = [];
+      data.confirmed.forEach((confirmed) => {
+        data.confirmedPerCapita.push((confirmed / capita[name]) * 10000);
+      });
 
-  data.forEach((row) => {
-    if (row["Country/Region"] == "China") {
-      for (let prop in row) {
-        const parts = prop.split("/");
-        // if it's a date
-        if (parts.length == 3) {
-          if (!newRow.hasOwnProperty(prop)) {
-            newRow[prop] = row[prop];
-          } else {
-            newRow[prop] += row[prop];
-          }
-        }
-      }
+      data.deathsPerCapita = [];
+      data.deaths.forEach((deaths) => {
+        data.deathsPerCapita.push((deaths / capita[name]) * 1000000);
+      });
     }
-  });
+  }
+}
 
-  data.push(newRow);
-};
+function plotType() {
+  return document.querySelector("#plotType").value == "confirmed"
+    ? "confirmedPerCapita"
+    : "deathsPerCapita";
+}
 
-addUSA = (data) => {
-  newRow = {
-    displayName: "United States",
-    "Country/Region": "United States",
-  };
-
-  data.forEach((row) => {
-    // there are rows for particular US counties in the data set; eliminate
-    // those by checking for a comma in the province/state field
-    if (
-      row["Country/Region"] == "US" &&
-      row["Province/State"].indexOf(",") == -1
-    ) {
-      for (let prop in row) {
-        const parts = prop.split("/");
-        // if it's a date
-        if (parts.length == 3) {
-          if (!newRow.hasOwnProperty(prop)) {
-            newRow[prop] = row[prop];
-          } else {
-            newRow[prop] += row[prop];
-          }
-        }
-      }
-    }
-  });
-
-  data.push(newRow);
-};
-
-calcPerCapitaValues = (data) => {
-  data.forEach((row) => {
-    let values = [];
-
-    for (let prop in row) {
-      // If the field is a date, parse it and add it to the values array.
-      // (We'll use this for graphing)
-      const parts = prop.split("/");
-      if (parts.length == 3) {
-        const dt = new Date(+("20" + parts[2]), +parts[0] - 1, +parts[1]);
-
-        if (dt < startdt) {
-          continue;
-        }
-
-        // We're going to graph the reported incidences per 10k people
-        const percapita = (row[prop] / capita[row.displayName]) * 10000;
-        values.push({
-          dt: dt,
-          value: percapita,
-        });
-      }
-    }
-
-    row.values = values;
-  });
-};
-
-fetchData = async () => {
-  // intentionally update the rawData global
-  rawData = await d3.csv("./time_series_19-covid-Confirmed.csv", (row) => {
-    ckey = "Country/Region";
-    pkey = "Province/State";
-
-    // Fix any names that need to be fixed here
-    if (row[ckey] == "Korea, South") {
-      row[ckey] = "South Korea";
-    }
-
-    // Many countries are listed like France, France or United Kingdom, United
-    // Kingdom. Remove their pkey so we read them as a country
-    if (row[ckey] == row[pkey]) {
-      row[pkey] = "";
-    }
-
-    if (row[pkey]) {
-      row.displayName = `${row[pkey]}, ${row[ckey]}`;
-    } else {
-      row.displayName = `${row[ckey]}`;
-    }
-
-    for (let prop in row) {
-      if (Object.prototype.hasOwnProperty.call(row, prop)) {
-        // If the field is a date, convert its value to a number
-        const parts = prop.split("/");
-        if (parts.length == 3) {
-          row[prop] = +row[prop];
-        }
-      }
-    }
-
-    return row;
-  });
-
-  addChina(rawData);
-  addUSA(rawData);
-
-  // skip countries we don't have population data for. Intentionally populate
-  // the global covidData value
-  covidData = rawData.filter(
-    (d) =>
-      capita.hasOwnProperty(d.displayName) && capita[d.displayName] > 100000
-  );
-
-  calcPerCapitaValues(covidData);
-
-  // Sort in order of max per-capita case rate
-  covidData.sort((a, b) =>
-    d3.max(a.values.map((d) => d.value)) < d3.max(b.values.map((d) => d.value))
-      ? 1
-      : -1
-  );
-};
-
-calcBaselineAlignedData = () => {
-  // intentionally update the global baselineData
-  baselineData = rawData.map((row) => {
-    newRow = { displayName: row.displayName };
-    passedTen = false;
-    values = [];
-    rawvalues = [];
-    // For every column in the row, if it's a date column, check if it's >10.
-    // As soon as we have one column that is, start saving every data point.
-    // Assumes that the date columns remain sorted in ascending order.
-    for (let prop in row) {
-      const parts = prop.split("/");
-      // if it's a date
-      if (parts.length == 3) {
-        const percapita = (row[prop] / capita[row.displayName]) * 10000;
-        if (!passedTen && percapita > 0.1) {
-          passedTen = true;
-        }
-        if (passedTen) {
-          values.push(percapita);
-          rawvalues.push(row[prop]);
-        }
-      }
-    }
-    newRow.values = values;
-    newRow.rawvalues = rawvalues;
-    return newRow;
-  });
-};
-
-drawLegend = (svg, margin, data) => {
+function drawLegend(svg, margin, data, title) {
   const legendWidth = 140;
   const x = 40;
   const y = 10;
@@ -233,7 +92,7 @@ drawLegend = (svg, margin, data) => {
     .attr("text-anchor", "left")
     .attr("alignment-baseline", "middle")
     .attr("class", "legendLabel")
-    .text((d, i) => d.displayName);
+    .text((d) => d.displayName);
 
   svg
     .append("rect")
@@ -242,23 +101,139 @@ drawLegend = (svg, margin, data) => {
     .attr("width", 270)
     .attr("height", 20)
     .attr("fill", "white");
-  svg
-    .append("text")
-    .attr("x", 30)
-    .attr("y", 50)
-    .text("Confirmed covid cases per 10,000 people");
-};
 
-// Create a graph where each state/country/we is graphed where day 0 is the day they had 10 cases
-graphBaselineAligned = () => {
-  if (!baselineData) {
-    calcBaselineAlignedData();
+  svg.append("text").attr("x", 30).attr("y", 50).text(title);
+}
+
+function graph() {
+  if (document.querySelector("#alignBaseline").checked) {
+    graphBaselineAligned();
+  } else if (document.querySelector("#difference").checked) {
+    graphDifference();
+  } else {
+    graphConfirmedByDate();
   }
-  const data = activeRegions.map((r) =>
-    baselineData.find((d) => d.displayName == r)
-  );
-  const maxX = d3.max(data.map((d) => d.values.length));
-  const maxY = d3.max(data.map((d) => d3.max(d.values)));
+}
+
+function parseDate(dt) {
+  const parts = dt.split("-");
+  return new Date(+parts[2], +parts[0] - 1, +parts[1]);
+}
+
+// return the index of the first item that is > min
+function startidx(arr, min) {
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] > min) {
+      return i;
+    }
+  }
+  return Number.MAX_VALUE;
+}
+
+function graphDifference() {
+  const data = activeRegions.map((r) => rawData.data[r]);
+  const type = document.querySelector("#plotType").value;
+  // hang a difference array off each data item
+  data.forEach((d) => {
+    d.difference = d[type].map(
+      (x, i) => ((d[type][i + 1] - x) / capita[d.displayName]) * 1000000
+    );
+    // the last item is always NaN, pop it.
+    d.difference.pop();
+  });
+  // find the number of days to slice off the front of the difference arrays,
+  // as the first day where any of them had a |difference| > 10 (is 10 a
+  // sensible number?)
+  const sliceidx = d3.min(data.map((d) => startidx(d.difference, 1)));
+  const startdt = rawData.dates[sliceidx + 1];
+  const maxdt = d3.max(rawData.dates);
+  const maxY = d3.max(data.map((b) => d3.max(b.difference)));
+  const minY = d3.min(data.map((b) => d3.min(b.difference)));
+  // then slice off [0, sliceidx) for each difference array, and save it as "plotdata"
+  const plotdata = data.map((d) => d.difference.slice(sliceidx));
+
+  console.log(data, plotdata);
+
+  const margin = { top: 10, right: 30, bottom: 30, left: 60 },
+    width = 800 - margin.left - margin.right,
+    height = 600 - margin.top - margin.bottom;
+
+  // clear the container
+  d3.select("#graphContainer svg").remove();
+
+  const svg = d3
+    .select("#graphContainer")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom);
+
+  svg
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  // Add X axis: the date
+  const x = d3.scaleTime().domain([startdt, maxdt]).range([0, width]);
+  svg
+    .append("g")
+    .attr("transform", "translate(0," + (height + 10) + ")")
+    .call(d3.axisBottom(x).ticks(8).tickSizeOuter(0).tickSizeInner(0))
+    .call((g) => g.select(".domain").remove());
+
+  // Add y axis: the # of confirmed cases
+  // https://observablehq.com/@d3/styled-axes
+  const y = document.querySelector("#logscale").checked
+    ? d3.scaleSymlog().domain([minY, maxY]).range([height, 0])
+    : d3.scaleLinear().domain([minY, maxY]).range([height, 0]);
+
+  svg
+    .append("g")
+    .attr("transform", "translate(0, 0)")
+    .call(d3.axisRight(y).tickSize(width).ticks(10))
+    // remove the y axis bar
+    .call((g) => g.select(".domain").remove())
+    // make the tick lines translucent
+    .call((g) =>
+      g.selectAll(".tick:not(:first-of-type) line").attr("stroke-opacity", 0.2)
+    )
+    // move the tick labels to the left
+    .call((g) => g.selectAll(".tick text").attr("x", 4).attr("dy", -4));
+
+  svg.on("mousemove", differenceMoved(svg, data, x, y)).on("mouseleave", left);
+
+  const line = d3
+    .line()
+    .x((d) => x(d[0]))
+    .y((d) => y(d[1]));
+
+  // for every state/nation, create a line
+  // example to follow: https://observablehq.com/@d3/index-chart
+  svg
+    .append("g")
+    .attr("class", "lines")
+    .selectAll("path")
+    .data(plotdata)
+    .join("path")
+    .attr("fill", "none")
+    .attr("stroke", (d, i) => activeColors[i])
+    .attr("stroke-width", 1.5)
+    .attr("class", "line")
+    .attr("d", (d) => line(d3.zip(rawData.dates.slice(sliceidx + 1), d)));
+
+  const title =
+    type == "confirmed"
+      ? "Difference in Confirmed Cases per 1 million residents"
+      : "Difference in Deaths per 1 million residents";
+
+  drawLegend(svg, margin, data, title);
+}
+
+function graphBaselineAligned() {
+  const data = activeRegions.map((r) => rawData.data[r]);
+  const type = plotType();
+  // hang a baseline array off each data item
+  data.forEach((d) => (d.baseline = d[type].slice(startidx(d[type], 0.25))));
+  const maxX = d3.max(data.map((b) => b.baseline.length));
+  const maxY = d3.max(data.map((b) => d3.max(b.baseline)));
 
   const margin = { top: 10, right: 30, bottom: 50, left: 60 },
     width = 800 - margin.left - margin.right,
@@ -316,32 +291,33 @@ graphBaselineAligned = () => {
     .append("g")
     .attr("class", "lines")
     .selectAll("path")
-    .data(data)
+    .data(data.map((d) => d.baseline))
     .join("path")
     .attr("fill", "none")
     .attr("stroke", (d, i) => activeColors[i])
     .attr("stroke-width", 1.5)
     .attr("class", "line")
-    .attr("d", (d) => line(d.values));
+    .attr("d", (d) => line(d));
 
   drawLegend(svg, margin, data);
 
+  const title =
+    type == "confirmedPerCapita"
+      ? "Days since case rate exceeded .25 per 10,000 people"
+      : "Days since deaths exceeded .25 per 1 million people";
   svg
     .append("text")
     .attr("x", width / 2)
     .attr("y", height + 40)
     .attr("text-anchor", "middle")
-    .text("Days since case rate exceeded .1 per 10k people");
-};
+    .text(title);
+}
 
-graphByDate = () => {
-  // It's important to keep the order of the `activeRegions` map the same as
-  // the order of `data` so that we keep the color choices stable
-  const data = activeRegions.map((r) =>
-    covidData.find((d) => d.displayName == r)
-  );
-  const maxdt = d3.max(data[0].values, (d) => d.dt);
-  const maxval = d3.max(data, (row) => d3.max(row.values.map((d) => d.value)));
+function graphConfirmedByDate() {
+  const data = activeRegions.map((r) => rawData.data[r]);
+  const maxdt = d3.max(rawData.dates);
+  const type = plotType();
+  const maxval = d3.max(data.map((d) => d3.max(d[type])));
 
   const margin = { top: 10, right: 30, bottom: 30, left: 60 },
     width = 800 - margin.left - margin.right,
@@ -361,6 +337,8 @@ graphByDate = () => {
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
   // Add X axis: the date
+  const dtparts = document.querySelector("#startdate").value.split("-");
+  const startdt = new Date(dtparts[0], dtparts[1] - 1, dtparts[2]);
   const x = d3.scaleTime().domain([startdt, maxdt]).range([0, width]);
   svg
     .append("g")
@@ -396,8 +374,8 @@ graphByDate = () => {
 
   const line = d3
     .line()
-    .x((d) => x(d.dt))
-    .y((d) => y(d.value));
+    .x((d) => x(d[0]))
+    .y((d) => y(d[1]));
 
   // for every state/nation, create a line
   // example to follow: https://observablehq.com/@d3/index-chart
@@ -405,26 +383,33 @@ graphByDate = () => {
     .append("g")
     .attr("class", "lines")
     .selectAll("path")
-    .data(data, (d) => d.values)
+    .data(data)
     .join("path")
     .attr("fill", "none")
     .attr("stroke", (d, i) => activeColors[i])
     .attr("stroke-width", 1.5)
     .attr("class", "line")
-    .attr("d", (d) => line(d.values));
+    .attr("d", (d) => line(d3.zip(rawData.dates, d[type])));
 
   drawLegend(svg, margin, data);
-};
+}
 
-left = () => {
-  d3.select("#hover").style("display", "none");
-};
+// return the index of a given date
+function dateidx(dt) {
+  for (let idx = 0; idx < rawData.dates.length; idx++) {
+    const d = rawData.dates[idx];
+    if (d.getMonth() == dt.getMonth() && d.getDate() == dt.getDate()) {
+      return idx;
+    }
+  }
+  return -1;
+}
 
 // given an array arr, return the index of the minimum element. Returns -1 if
 // every element of the array is NaN. I do not understand why d3.minIndex
 // (https://github.com/d3/d3-array#minIndex) is not available to me, but it
 // seems not to be.
-minidx = (arr) => {
+function minidx(arr) {
   if (!arr.length) {
     return;
   }
@@ -437,17 +422,56 @@ minidx = (arr) => {
     }
   }
   return minidx;
-};
+}
 
-baselineMoved = (svg, data, xscale, yscale) => {
+function differenceMoved(svg, data, xscale, yscale) {
   return () => {
     d3.event.preventDefault();
     const { x: x0, y: y0 } = svg.node().getBoundingClientRect();
-    const dayn = Math.floor(xscale.invert(d3.event.clientX - x0 + 20));
+    const dt = xscale.invert(d3.event.clientX - x0 - 5);
+    const dt2 = new Date(dt.valueOf());
+    dt2.setDate(dt.getDate() + 1);
     const val = yscale.invert(d3.event.clientY - y0);
-    const values = data.map((d) => d.values[dayn]);
-    const diffs = values.map((d) => Math.abs(d - val));
+    const idx = dateidx(dt);
+    const diffs = data.map((d) => Math.abs(val - d.difference[idx]));
+    const type = document.querySelector("#plotType").value;
+    // find the closest line and show the tooltip
+    const dataidx = minidx(diffs);
 
+    // if no lines are close enough, hide the tooltip and exit
+    if (
+      diffs.filter((d) => d < 1000).length == 0 ||
+      data[dataidx].difference[idx] === undefined
+    ) {
+      d3.select("#hover").style("display", "none");
+      return;
+    }
+
+    d3
+      .select("#hover")
+      .style("display", "block")
+      .style("left", d3.event.pageX + 10 + "px")
+      .style("top", d3.event.pageY + "px").html(`<strong>${
+      data[dataidx].displayName
+    }</strong><br>
+${dt.toLocaleDateString()}: ${data[dataidx][type][idx]}<br>
+${dt2.toLocaleDateString()}: ${data[dataidx][type][idx + 1]}<br>
+difference: ${data[dataidx][type][idx + 1] - data[dataidx][type][idx]}<br>
+difference per 1 million residents: ${data[dataidx].difference[idx].toFixed(
+      2
+    )}`);
+  };
+}
+
+function baselineMoved(svg, data, xscale, yscale) {
+  return () => {
+    d3.event.preventDefault();
+    const { x: x0, y: y0 } = svg.node().getBoundingClientRect();
+    const dayn = Math.round(xscale.invert(d3.event.clientX - x0));
+    const val = yscale.invert(d3.event.clientY - y0);
+    const diffs = data.map((d) => Math.abs(val - d.baseline[dayn]));
+
+    // if no lines are close enough, hide the tooltip and exit
     if (diffs.filter((d) => d < 1).length == 0) {
       d3.select("#hover").style("display", "none");
       return;
@@ -455,6 +479,11 @@ baselineMoved = (svg, data, xscale, yscale) => {
 
     // find the closest line and show the tooltip
     const dataidx = minidx(diffs);
+    // the index of the data in the non-baseline arrays can be found by
+    // starting where the baseline does and adding dayn to it
+    const nonBaselineIdx =
+      data[dataidx].confirmed.length - data[dataidx].baseline.length + dayn;
+
     d3
       .select("#hover")
       .style("display", "block")
@@ -463,36 +492,23 @@ baselineMoved = (svg, data, xscale, yscale) => {
       data[dataidx].displayName
     }</strong><br>
 Day number: ${dayn}<br>
-Cases: ${data[dataidx].rawvalues[dayn]}<br>
-Per Capita: ${values[dataidx].toFixed(2)}`);
+Cases: ${data[dataidx].confirmed[nonBaselineIdx]}<br>
+Deaths: ${data[dataidx].deaths[nonBaselineIdx]}<br>
+Per Capita: ${data[dataidx][plotType()][nonBaselineIdx].toFixed(2)}`);
   };
-};
+}
 
-dateMoved = (svg, data, xscale, yscale) => {
+function dateMoved(svg, data, xscale, yscale) {
   return () => {
     d3.event.preventDefault();
     const { x: x0, y: y0 } = svg.node().getBoundingClientRect();
     const dt = xscale.invert(d3.event.clientX - x0 + 20);
-    const dtprop = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getYear() - 100}`;
     const val = yscale.invert(d3.event.clientY - y0);
-
-    let choices = undefined;
-    try {
-      // for each line, find the value at the point that matches the date of the
-      // users' pointer
-      choices = data.map(
-        (d) =>
-          d.values.find(
-            (v) =>
-              v.dt.getMonth() == dt.getMonth() && v.dt.getDate() == dt.getDate()
-          ).value
-      );
-    } catch {
-      d3.select("#hover").style("display", "none");
-      return;
-    }
-
+    const idx = dateidx(dt);
+    const type = plotType();
+    const choices = data.map((d) => d[type][idx]);
     const diffs = choices.map((d) => Math.abs(val - d));
+
     // if no lines are close enough, hide the tooltip and exit
     if (diffs.filter((d) => d < 1).length == 0) {
       d3.select("#hover").style("display", "none");
@@ -509,50 +525,42 @@ dateMoved = (svg, data, xscale, yscale) => {
       data[dataidx].displayName
     }</strong><br>
 Date: ${dt.toLocaleDateString()}<br>
-Cases: ${data[dataidx][dtprop]}<br>
-Per Capita: ${choices[dataidx].toFixed(2)}`);
+Cases: ${data[dataidx].confirmed[idx]}<br>
+Deaths: ${data[dataidx].deaths[idx]}<br>
+Per Capita: ${data[dataidx][type][idx].toFixed(2)}`);
   };
-};
+}
 
-addHandler = (name) => {
-  d3.event.preventDefault();
+function left() {
+  d3.select("#hover").style("display", "none");
+}
 
-  if (activeRegions.length < 10) {
-    activeRegions.push(name);
-    activeColors.push(inactiveColors.shift());
-  }
-  buildTable();
-  graph();
-};
+function buildTable() {
+  // the regions we want to list must be present in the population data and
+  // have greater than 1m residents
+  const inactiveRegions = d3
+    .keys(rawData.data)
+    .filter(
+      (d) =>
+        activeRegions.indexOf(d) == -1 &&
+        capita.hasOwnProperty(d) &&
+        capita[d] > 640000
+    );
 
-removeHandler = (name) => {
-  d3.event.preventDefault();
-
-  // remove the region from activeRegions and remove its color from
-  // activeColors, and return it to the color pool
-  const idx = activeRegions.indexOf(name);
-  activeRegions.splice(idx, 1);
-  inactiveColors.push(activeColors[idx]);
-  activeColors.splice(idx, 1);
-  buildTable();
-  graph();
-};
-
-graph = () => {
-  document.querySelector("#alignBaseline").checked
-    ? graphBaselineAligned()
-    : graphByDate();
-};
-
-buildTable = () => {
-  const inactiveRegions = covidData
-    .map((d) => d.displayName)
-    .filter((d) => activeRegions.indexOf(d) == -1);
+  const type = plotType();
+  inactiveRegions.sort((a, b) =>
+    d3.max(rawData.data[a][type]) < d3.max(rawData.data[b][type]) ? 1 : -1
+  );
 
   const inactiveCountries = inactiveRegions
     .filter((d) => d.indexOf(", US") == -1)
     .slice(0, 55);
   const inactiveStates = inactiveRegions.filter((d) => d.indexOf(", US") != -1);
+
+  if (document.querySelector("#alphabetical").checked) {
+    inactiveCountries.sort((a, b) => (a < b ? -1 : 1));
+    inactiveStates.sort((a, b) => (a < b ? -1 : 1));
+  }
 
   d3.select("#countries ul")
     .selectAll("li.region")
@@ -577,16 +585,71 @@ buildTable = () => {
     .attr("class", "activeRegion")
     .on("click", removeHandler)
     .html((d) => `<a href="#" class="rem" data-name="${d}">${d} <<</a>`);
-};
+}
 
-main = async () => {
-  await fetchData();
-  graph();
+function addHandler(name) {
+  d3.event.preventDefault();
+
+  if (activeRegions.length < 10) {
+    activeRegions.push(name);
+    activeColors.push(inactiveColors.shift());
+  }
   buildTable();
-  document.querySelector("#logscale").addEventListener("change", graph);
-  document.querySelector("#alignBaseline").addEventListener("change", graph);
-};
+  graph();
+}
 
-window.addEventListener("DOMContentLoaded", (evt) => {
+function removeHandler(name) {
+  d3.event.preventDefault();
+
+  // remove the region from activeRegions and remove its color from
+  // activeColors, and return it to the color pool
+  const idx = activeRegions.indexOf(name);
+  activeRegions.splice(idx, 1);
+  inactiveColors.push(activeColors[idx]);
+  activeColors.splice(idx, 1);
+  buildTable();
+  graph();
+}
+
+async function main() {
+  await fetchData();
+  buildTable();
+  graph();
+  document.querySelector("#logscale").addEventListener("change", graph);
+  document
+    .querySelector("#alphabetical")
+    .addEventListener("change", buildTable);
+  document.querySelector("#alignBaseline").addEventListener("change", (evt) => {
+    if (evt.target.checked) {
+      d3.select("label[for=startdate").style("color", "lightgrey");
+      document.querySelector("#startdate").disabled = true;
+    } else {
+      d3.select("label[for=startdate").style("color", "black");
+      document.querySelector("#startdate").disabled = false;
+    }
+    graph();
+  });
+  document.querySelector("#startdate").addEventListener("change", graph);
+  document.querySelector("#datadt").innerText = d3
+    .max(rawData.dates)
+    .toLocaleDateString();
+  document.querySelector("#plotType").addEventListener("change", graph);
+  document.querySelector("#difference").addEventListener("change", (evt) => {
+    if (evt.target.checked) {
+      d3.select("label[for=startdate]").style("color", "lightgrey");
+      document.querySelector("#startdate").disabled = true;
+      d3.select("label[for=alignBaseline]").style("color", "lightgrey");
+      document.querySelector("#alignBaseline").disabled = true;
+    } else {
+      d3.select("label[for=startdate]").style("color", "black");
+      document.querySelector("#startdate").disabled = false;
+      d3.select("label[for=alignBaseline]").style("color", "black");
+      document.querySelector("#alignBaseline").disabled = false;
+    }
+    graph();
+  });
+}
+
+window.addEventListener("DOMContentLoaded", () => {
   main();
 });

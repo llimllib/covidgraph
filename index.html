@@ -63,7 +63,7 @@ label#alphaLabel:hover::after {
 </style>
 <script src="https://d3js.org/d3.v5.js"></script>
 <script src="capita.js"></script>
-<script src="newgraph.js"></script>
+<script src="graph.js"></script>
     </head>
 <body>
   <div id="hover">
@@ -96,7 +96,11 @@ label#alphaLabel:hover::after {
           </p>
           <p>
             <input type="checkbox" id="alignBaseline" name="alignBaseline">
-            <label for="alignBaseline">align regions</label>
+            <label for="alignBaseline" id="alignLabel">align regions</label>
+          </p>
+          <p>
+            <input type="checkbox" id="difference" name="difference">
+            <label for="difference">difference</label>
           </p>
           <p>
             <input type="checkbox" id="alphabetical" name="alphabetical">
