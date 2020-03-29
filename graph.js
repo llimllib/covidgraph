@@ -2,8 +2,7 @@
 // or axis type
 // TODO: plot new case rate?
 //   * add smoothing option?
-//   * disable the start date
-//   * disable align baselines
+//   * disable align baselines ✅
 //     * then figure out how to make it work!
 // TODO: put actual date in baseline hover
 // TODO: move legend when it blocks lines (baseline && log graph)
