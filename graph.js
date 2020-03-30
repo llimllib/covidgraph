@@ -535,14 +535,14 @@ function left() {
 
 function buildTable() {
   // the regions we want to list must be present in the population data and
-  // have greater than 1m residents
+  // have greater than 1m residents or be a US state
   const inactiveRegions = d3
     .keys(rawData.data)
     .filter(
       (d) =>
         activeRegions.indexOf(d) == -1 &&
         capita.hasOwnProperty(d) &&
-        capita[d] > 640000
+        (capita[d] > 1000000 || d.indexOf(", US") != -1)
     );
 
   const type = plotType();
