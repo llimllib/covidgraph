@@ -1,74 +1,13 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<meta charset="UTF-8">
-		<title>US States Covid Graph</title>
-<style>
-.selector {
-  display: inline-block;
-  vertical-align: top;
-  list-style-type: none;
-}
-
-h4 {
-  display: inline-block;
-  margin-bottom: 0px;
-}
-
-#graphContainer {
-  margin-top: 30px;
-}
-
-a:visited {
-  color: blue;
-}
-
-.headerLI {
-  height: 80px;
-}
-
-.rightpanel {
-  float: right;
-  margin-top: 20px;
-  width: 200px;
-}
-
-article {
-  width: 1000px;
-  margin: auto;
-}
-
-#hover {
-  position: absolute;
-  display: none;
-  background: white;
-  padding: 5px;
-  border: 1px solid black;
-}
-label#alphaLabel {
-  position: relative;
-  border-bottom: 1px dotted black;
-  cursor: help;
-}
-label#alphaLabel:hover::after {
-  content: "By default, items are sorted by maximum per capita cases";
-  position: absolute ;
-  background-color: white;
-  top: 1.1em ;
-  left: 1em ;
-  z-index: 1 ;
-  padding: 5px;
-  border: 1px solid black;
-}
-
-.suboption {
-  margin-left: 10px;
-}
-</style>
-<script src="https://d3js.org/d3.v5.js"></script>
-<script src="capita.js"></script>
-<script src="graph.js"></script>
-    </head>
+  <head>
+    <meta charset="UTF-8">
+    <title>US States Covid Graph</title>
+    <script src="https://d3js.org/d3.v5.js"></script>
+    <script src="capita.js"></script>
+    <script src="graph.js"></script>
+    <link rel="stylesheet" href="/static/base.css">
+  </head>
 <body>
   <div id="hover">
   </div>
@@ -127,24 +66,25 @@ label#alphaLabel:hover::after {
         </div>
       </div>
     </div>
-    <div>
-    </div>
     <div id="regionSelector">
-      <span id="countries">
+      <div id="countries">
+        <h4>Countries</h4>
+        <p class="instructions">Click to add</p>
         <ul class="countryList selector">
-          <li class="headerLI"><h4>Countries</h4><br>(click to add)</li>
         </ul>
-      </span>
-      <span id="states">
+      </div>
+      <div id="states">
+        <h4>US States</h4>
+        <p class="instructions">Click to add</p>
         <ul class="stateList selector">
-          <li class="headerLI"><h4>US States</h4><br>(click to add)</li>
         </ul>
-      </span>
-      <span id="selectedRegions">
+      </div>
+      <div id="selectedRegions">
+        <h4>Selected Areas</h4>
+        <p class="instructions">Max 10 regions, click to remove</p>
         <ul class="selector">
-          <li class="headerLI"><h4>Selected Areas</h4><br>(click to remove. 10 max)</li>
         </ul>
-      </span>
+      </div>
     </div>
   </article>
 </body>
