@@ -566,7 +566,7 @@ function buildTable() {
     .join("li")
     .attr("class", "region")
     .on("click", addHandler)
-    .html((d) => `<a href="#" class="add" data-name="${d}">${d} >></a>`);
+    .html((d) => `<a href="#" class="add" data-name="${d}">${d} &raquo;</a>`);
 
   d3.select("#states ul")
     .selectAll("li.region")
@@ -574,7 +574,7 @@ function buildTable() {
     .join("li")
     .attr("class", "region")
     .on("click", addHandler)
-    .html((d) => `<a href="#" class="add" data-name="${d}">${d} >></a>`);
+    .html((d) => `<a href="#" class="add" data-name="${d}">${d} &raquo;</a>`);
 
   d3.select("#selectedRegions ul")
     .selectAll("li.activeRegion")
@@ -582,7 +582,7 @@ function buildTable() {
     .join("li")
     .attr("class", "activeRegion")
     .on("click", removeHandler)
-    .html((d) => `<a href="#" class="rem" data-name="${d}">${d} <<</a>`);
+    .html((d) => `<a href="#" class="rem" data-name="${d}">${d} &laquo;</a>`);
 }
 
 function addHandler(name) {
