@@ -298,12 +298,24 @@ function graphBaselineAligned() {
     .attr("class", "line")
     .attr("d", (d) => line(d));
 
+
   const title =
+    type == "confirmedPerCapita"
+      ? "Confirmed covid cases per 10,000 people"
+      : "Confirmed covid deaths per 1 million people";
+
+  drawLegend(svg, margin, data, title);
+
+  const xtitle =
     type == "confirmedPerCapita"
       ? "Days since case rate exceeded .25 per 10,000 people"
       : "Days since deaths exceeded .25 per 1 million people";
-
-  drawLegend(svg, margin, data, title);
+  svg
+  .append("text")
+  .attr("x", width / 2)
+  .attr("y", height + 40)
+  .attr("text-anchor", "middle")
+  .text(xtitle);
 }
 
 function graphConfirmedByDate() {
