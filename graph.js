@@ -665,15 +665,20 @@ async function main() {
   document.querySelector("#smooth").addEventListener("change", graph);
   document.querySelector("#difference").addEventListener("change", (evt) => {
     if (evt.target.checked) {
+      // disable start date and baseline options; enable rolling average
       d3.select("label[for=startdate]").style("color", "lightgrey");
       document.querySelector("#startdate").disabled = true;
       d3.select("label[for=alignBaseline]").style("color", "lightgrey");
       document.querySelector("#alignBaseline").disabled = true;
+      d3.select("label[for=smooth]").style("color", "black");
+      document.querySelector("#smooth").disabled = false;
     } else {
       d3.select("label[for=startdate]").style("color", "black");
       document.querySelector("#startdate").disabled = false;
       d3.select("label[for=alignBaseline]").style("color", "black");
       document.querySelector("#alignBaseline").disabled = false;
+      d3.select("label[for=smooth]").style("color", "lightgrey");
+      document.querySelector("#smooth").disabled = true;
     }
     graph();
   });
