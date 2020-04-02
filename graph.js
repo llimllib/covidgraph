@@ -1,9 +1,7 @@
 // TODO: permalinks that allow sharing of a graph with a particular country set
 // or axis type
-// TODO: plot new case rate?
-//   * add smoothing option?
-//   * disable align baselines ✅
-//     * then figure out how to make it work!
+// TODO: figure out how to enable baseline matching on difference plots
+//       * redo UI?
 // TODO: put actual date in baseline hover
 // TODO: move legend when it blocks lines (baseline && log graph)
 // TODO: responsive layout
@@ -129,6 +127,14 @@ function startidx(arr, min) {
   return Number.MAX_VALUE;
 }
 
+function smooth(values) {
+  const smoothed = [values[0], values[0] + values[1]];
+  for (let i = 2; i < values.length; i++) {
+    smoothed.push((values[i] + values[i - 1] + values[i - 2]) / 3);
+  }
+  return smoothed;
+}
+
 function graphDifference() {
   const data = activeRegions.map((r) => rawData.data[r]);
   const type = document.querySelector("#plotType").value;
@@ -139,17 +145,24 @@ function graphDifference() {
     );
     // the last item is always NaN, pop it.
     d.difference.pop();
+
+    d.smoothed = smooth(d.difference);
   });
+  const isSmoothed = document.querySelector("#smooth").checked;
   // find the number of days to slice off the front of the difference arrays,
   // as the first day where any of them had a |difference| > 10 (is 10 a
   // sensible number?)
   const sliceidx = d3.min(data.map((d) => startidx(d.difference, 1)));
   const startdt = rawData.dates[sliceidx + 1];
   const maxdt = d3.max(rawData.dates);
-  const maxY = d3.max(data.map((b) => d3.max(b.difference)));
+  const maxY = d3.max(
+    data.map((b) => d3.max(isSmoothed ? b.smoothed : b.difference))
+  );
   const minY = d3.min(data.map((b) => d3.min(b.difference)));
   // then slice off [0, sliceidx) for each difference array, and save it as "plotdata"
-  const plotdata = data.map((d) => d.difference.slice(sliceidx));
+  const plotdata = isSmoothed
+    ? data.map((d) => d.smoothed.slice(sliceidx))
+    : data.map((d) => d.difference.slice(sliceidx));
 
   console.log(data, plotdata);
 
@@ -218,10 +231,14 @@ function graphDifference() {
     .attr("class", "line")
     .attr("d", (d) => line(d3.zip(rawData.dates.slice(sliceidx + 1), d)));
 
-  const title =
+  let title =
     type == "confirmed"
       ? "Difference in Confirmed Cases per 1 million residents"
       : "Difference in Deaths per 1 million residents";
+
+  if (isSmoothed) {
+    title = title + " (3-day average)";
+  }
 
   drawLegend(svg, margin, data, title);
 }
@@ -298,7 +315,6 @@ function graphBaselineAligned() {
     .attr("class", "line")
     .attr("d", (d) => line(d));
 
-
   const title =
     type == "confirmedPerCapita"
       ? "Confirmed covid cases per 10,000 people"
@@ -311,11 +327,11 @@ function graphBaselineAligned() {
       ? "Days since case rate exceeded .25 per 10,000 people"
       : "Days since deaths exceeded .25 per 1 million people";
   svg
-  .append("text")
-  .attr("x", width / 2)
-  .attr("y", height + 40)
-  .attr("text-anchor", "middle")
-  .text(xtitle);
+    .append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 40)
+    .attr("text-anchor", "middle")
+    .text(xtitle);
 }
 
 function graphConfirmedByDate() {
@@ -443,7 +459,9 @@ function differenceMoved(svg, data, xscale, yscale) {
     dt2.setDate(dt.getDate() + 1);
     const val = yscale.invert(d3.event.clientY - y0);
     const idx = dateidx(dt);
-    const diffs = data.map((d) => Math.abs(val - d.difference[idx]));
+    const isSmoothed = document.querySelector("#smooth").checked;
+    const key = isSmoothed ? "smoothed" : "difference";
+    const diffs = data.map((d) => Math.abs(val - d[key][idx]));
     const type = document.querySelector("#plotType").value;
     // find the closest line and show the tooltip
     const dataidx = minidx(diffs);
@@ -451,7 +469,7 @@ function differenceMoved(svg, data, xscale, yscale) {
     // if no lines are close enough, hide the tooltip and exit
     if (
       diffs.filter((d) => d < 1000).length == 0 ||
-      data[dataidx].difference[idx] === undefined
+      data[dataidx][key][idx] === undefined
     ) {
       d3.select("#hover").style("display", "none");
       return;
@@ -644,6 +662,7 @@ async function main() {
     .max(rawData.dates)
     .toLocaleDateString();
   document.querySelector("#plotType").addEventListener("change", graph);
+  document.querySelector("#smooth").addEventListener("change", graph);
   document.querySelector("#difference").addEventListener("change", (evt) => {
     if (evt.target.checked) {
       d3.select("label[for=startdate]").style("color", "lightgrey");

@@ -60,6 +60,10 @@ label#alphaLabel:hover::after {
   padding: 5px;
   border: 1px solid black;
 }
+
+.suboption {
+  margin-left: 10px;
+}
 </style>
 <script src="https://d3js.org/d3.v5.js"></script>
 <script src="capita.js"></script>
@@ -101,6 +105,10 @@ label#alphaLabel:hover::after {
           <p>
             <input type="checkbox" id="difference" name="difference">
             <label for="difference">difference</label>
+            <div class="suboption">
+              <input type="checkbox" id="smooth" name="smooth">
+              <label for="smooth">3-day average</label>
+            </div>
           </p>
           <p>
             <input type="checkbox" id="alphabetical" name="alphabetical">
