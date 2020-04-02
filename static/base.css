@@ -108,6 +108,6 @@ label:hover::after {
 label#alphaLabel:hover::after {
   content: "By default, items are sorted highest to lowest per capita cases";
 }
-label#alignLabel:hover::after {
-  content: "Change x-axis from calendar date to days since first recorded infection";
+.percapita:hover::after {
+  content: "Change x-axis from date to days since case rate exceeded baseline";
 }
