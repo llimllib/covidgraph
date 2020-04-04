@@ -7,6 +7,9 @@
 // TODO: responsive layout
 //
 // intentionally global. Let's let users play with it in the console if they want
+
+const $ = document.querySelector.bind(document);
+
 /*global rawData:writeable d3 capita*/
 rawData = undefined;
 
@@ -15,10 +18,8 @@ let activeRegions = [
   "Italy",
   "New York, US",
   "Washington, US",
-  "South Korea",
-  "California, US",
   "New Jersey, US",
-  "Maine, US",
+  "Louisiana, US",
 ];
 
 // We want to keep colors consistent when changing the activeRegions map, so
@@ -50,7 +51,7 @@ async function fetchData() {
 }
 
 function plotType() {
-  return document.querySelector("#plotType").value == "confirmed"
+  return $("#plotType").value == "confirmed"
     ? "confirmedPerCapita"
     : "deathsPerCapita";
 }
@@ -103,9 +104,9 @@ function drawLegend(svg, margin, data, title) {
 }
 
 function graph() {
-  if (document.querySelector("#alignBaseline").checked) {
+  if ($("#alignBaseline").checked) {
     graphBaselineAligned();
-  } else if (document.querySelector("#difference").checked) {
+  } else if ($("#difference").checked) {
     graphDifference();
   } else {
     graphConfirmedByDate();
@@ -137,7 +138,7 @@ function smooth(values) {
 
 function graphDifference() {
   const data = activeRegions.map((r) => rawData.data[r]);
-  const type = document.querySelector("#plotType").value;
+  const type = $("#plotType").value;
   // hang a difference array off each data item
   data.forEach((d) => {
     d.difference = d[type].map(
@@ -148,7 +149,7 @@ function graphDifference() {
 
     d.smoothed = smooth(d.difference);
   });
-  const isSmoothed = document.querySelector("#smooth").checked;
+  const isSmoothed = $("#smooth").checked;
   // find the number of days to slice off the front of the difference arrays,
   // as the first day where any of them had a |difference| > 10 (is 10 a
   // sensible number?)
@@ -163,8 +164,6 @@ function graphDifference() {
   const plotdata = isSmoothed
     ? data.map((d) => d.smoothed.slice(sliceidx))
     : data.map((d) => d.difference.slice(sliceidx));
-
-  console.log(data, plotdata);
 
   const margin = { top: 10, right: 30, bottom: 30, left: 60 },
     width = 800 - margin.left - margin.right,
@@ -193,7 +192,7 @@ function graphDifference() {
 
   // Add y axis: the # of confirmed cases
   // https://observablehq.com/@d3/styled-axes
-  const y = document.querySelector("#logscale").checked
+  const y = $("#logscale").checked
     ? d3.scaleSymlog().domain([minY, maxY]).range([height, 0])
     : d3.scaleLinear().domain([minY, maxY]).range([height, 0]);
 
@@ -277,7 +276,7 @@ function graphBaselineAligned() {
 
   // Add y axis: the # of confirmed cases
   // https://observablehq.com/@d3/styled-axes
-  const y = document.querySelector("#logscale").checked
+  const y = $("#logscale").checked
     ? d3.scaleLog().domain([0.25, maxY]).range([height, 0]).base(2).clamp(true)
     : d3.scaleLinear().domain([0, maxY]).range([height, 0]);
 
@@ -358,7 +357,7 @@ function graphConfirmedByDate() {
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
   // Add X axis: the date
-  const dtparts = document.querySelector("#startdate").value.split("-");
+  const dtparts = $("#startdate").value.split("-");
   const startdt = new Date(dtparts[0], dtparts[1] - 1, dtparts[2]);
   const x = d3.scaleTime().domain([startdt, maxdt]).range([0, width]);
   svg
@@ -369,7 +368,7 @@ function graphConfirmedByDate() {
 
   // Add y axis: the # of confirmed cases
   // https://observablehq.com/@d3/styled-axes
-  const y = document.querySelector("#logscale").checked
+  const y = $("#logscale").checked
     ? d3
         .scaleLog()
         .domain([0.25, maxval])
@@ -459,10 +458,10 @@ function differenceMoved(svg, data, xscale, yscale) {
     dt2.setDate(dt.getDate() + 1);
     const val = yscale.invert(d3.event.clientY - y0);
     const idx = dateidx(dt);
-    const isSmoothed = document.querySelector("#smooth").checked;
+    const isSmoothed = $("#smooth").checked;
     const key = isSmoothed ? "smoothed" : "difference";
     const diffs = data.map((d) => Math.abs(val - d[key][idx]));
-    const type = document.querySelector("#plotType").value;
+    const type = $("#plotType").value;
     // find the closest line and show the tooltip
     const dataidx = minidx(diffs);
 
@@ -585,7 +584,7 @@ function buildTable() {
     .slice(0, 55);
   const inactiveStates = inactiveRegions.filter((d) => d.indexOf(", US") != -1);
 
-  if (document.querySelector("#alphabetical").checked) {
+  if ($("#alphabetical").checked) {
     inactiveCountries.sort((a, b) => (a < b ? -1 : 1));
     inactiveStates.sort((a, b) => (a < b ? -1 : 1));
   }
@@ -639,49 +638,100 @@ function removeHandler(name) {
   graph();
 }
 
+function makePermalink() {
+  const state = {
+    regions: activeRegions,
+    plotType: $("#plotType").value,
+    logscale: $("#logscale").checked,
+    alignBaseline: $("#alignBaseline").checked,
+    difference: $("#difference").checked,
+    smooth: $("#smooth").checked,
+    alphabetical: $("#alphabetical").checked,
+    startdate: $("#startdate").value,
+  };
+  // replace the URL with a permalink
+  const url = window.location.href.split("?")[0];
+  window.history.replaceState(
+    {},
+    null,
+    url + "?state=" + btoa(JSON.stringify(state))
+  );
+}
+
+function loadState() {
+  try {
+    const state = JSON.parse(
+      atob(new URLSearchParams(document.location.search).get("state"))
+    );
+
+    activeRegions = state.regions;
+    $("#plotType").checked = state.plotType;
+    $("#logscale").checked = state.logscale;
+    $("#alignBaseline").checked = state.alignBaseline;
+    $("#difference").checked = state.difference;
+    $("#smooth").checked = state.smooth;
+    $("#alphabetical").checked = state.checked;
+    $("#startdate").value = state.startdate;
+  } catch {
+    return;
+  }
+}
+
+function differenceChanged() {
+  if ($("#difference").checked) {
+    // disable start date and baseline options; enable rolling average
+    d3.select("label[for=startdate]").style("color", "lightgrey");
+    $("#startdate").disabled = true;
+    d3.select("label[for=alignBaseline]").style("color", "lightgrey");
+    $("#alignBaseline").disabled = true;
+    d3.select("label[for=smooth]").style("color", "black");
+    $("#smooth").disabled = false;
+  } else {
+    d3.select("label[for=startdate]").style("color", "black");
+    $("#startdate").disabled = false;
+    d3.select("label[for=alignBaseline]").style("color", "black");
+    $("#alignBaseline").disabled = false;
+    d3.select("label[for=smooth]").style("color", "lightgrey");
+    $("#smooth").disabled = true;
+  }
+
+  graph();
+}
+
+function baselineChanged() {
+  if ($("#alignBaseline").checked) {
+    d3.select("label[for=startdate").style("color", "lightgrey");
+    $("#startdate").disabled = true;
+  } else {
+    d3.select("label[for=startdate").style("color", "black");
+    $("#startdate").disabled = false;
+  }
+  graph();
+}
+
 async function main() {
   await fetchData();
+
+  // If there is state provided in the URL, load it
+  loadState();
+
   buildTable();
-  graph();
-  document.querySelector("#logscale").addEventListener("change", graph);
+  $("#logscale").addEventListener("change", graph);
   document
     .querySelector("#alphabetical")
     .addEventListener("change", buildTable);
-  document.querySelector("#alignBaseline").addEventListener("change", (evt) => {
-    if (evt.target.checked) {
-      d3.select("label[for=startdate").style("color", "lightgrey");
-      document.querySelector("#startdate").disabled = true;
-    } else {
-      d3.select("label[for=startdate").style("color", "black");
-      document.querySelector("#startdate").disabled = false;
-    }
-    graph();
-  });
-  document.querySelector("#startdate").addEventListener("change", graph);
-  document.querySelector("#datadt").innerText = d3
-    .max(rawData.dates)
-    .toLocaleDateString();
-  document.querySelector("#plotType").addEventListener("change", graph);
-  document.querySelector("#smooth").addEventListener("change", graph);
-  document.querySelector("#difference").addEventListener("change", (evt) => {
-    if (evt.target.checked) {
-      // disable start date and baseline options; enable rolling average
-      d3.select("label[for=startdate]").style("color", "lightgrey");
-      document.querySelector("#startdate").disabled = true;
-      d3.select("label[for=alignBaseline]").style("color", "lightgrey");
-      document.querySelector("#alignBaseline").disabled = true;
-      d3.select("label[for=smooth]").style("color", "black");
-      document.querySelector("#smooth").disabled = false;
-    } else {
-      d3.select("label[for=startdate]").style("color", "black");
-      document.querySelector("#startdate").disabled = false;
-      d3.select("label[for=alignBaseline]").style("color", "black");
-      document.querySelector("#alignBaseline").disabled = false;
-      d3.select("label[for=smooth]").style("color", "lightgrey");
-      document.querySelector("#smooth").disabled = true;
-    }
-    graph();
-  });
+  $("#alignBaseline").addEventListener("change", baselineChanged);
+  $("#startdate").addEventListener("change", graph);
+  $("#datadt").innerText = d3.max(rawData.dates).toLocaleDateString();
+  $("#plotType").addEventListener("change", graph);
+  $("#smooth").addEventListener("change", graph);
+  $("#difference").addEventListener("change", differenceChanged);
+  $("#permalink").addEventListener("click", makePermalink);
+
+  differenceChanged();
+  baselineChanged();
+
+  graph();
 }
 
 window.addEventListener("DOMContentLoaded", () => {
