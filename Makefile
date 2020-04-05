@@ -14,3 +14,8 @@ publish:
 	git checkout -b gh-pages
 	git push -f -u origin gh-pages
 	git checkout master
+
+.PHONY: update
+update: process
+	git commit -m "update data $(shell date)" data.json
+	make publish
