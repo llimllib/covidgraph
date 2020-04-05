@@ -665,6 +665,8 @@ function loadState() {
     );
 
     activeRegions = state.regions;
+    activeColors = d3.schemeCategory10.slice(0, activeRegions.length);
+    inactiveColors = d3.schemeCategory10.slice(activeRegions.length);
     $("#plotType").checked = state.plotType;
     $("#logscale").checked = state.logscale;
     $("#alignBaseline").checked = state.alignBaseline;
@@ -672,7 +674,7 @@ function loadState() {
     $("#smooth").checked = state.smooth;
     $("#alphabetical").checked = state.checked;
     $("#startdate").value = state.startdate;
-  } catch {
+  } catch (e) {
     return;
   }
 }
