@@ -3,8 +3,6 @@
 // TODO: put actual date in baseline hover
 // TODO: move legend when it blocks lines (baseline && log graph)
 // TODO: responsive layout
-//
-// intentionally global. Let's let users play with it in the console if they want
 
 const $ = document.querySelector.bind(document);
 
