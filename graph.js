@@ -1,5 +1,3 @@
-// TODO: permalinks that allow sharing of a graph with a particular country set
-// or axis type
 // TODO: figure out how to enable baseline matching on difference plots
 //       * redo UI?
 // TODO: put actual date in baseline hover
