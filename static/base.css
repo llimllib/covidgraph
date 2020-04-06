@@ -1,0 +1,110 @@
+/* Layout */
+article {
+  width: 1000px;
+  margin: auto;
+}
+#graphContainer {
+  margin-top: 30px;
+}
+#regionSelector {
+  margin: 0 0 0 2em;
+}
+#regionSelector > div {
+  display: inline-block;
+}
+.rightpanel {
+  float: right;
+  margin-top: 20px;
+  width: 200px;
+}
+#hover {
+  position: absolute;
+  display: none;
+  background: white;
+  border: 1px solid #232323;
+}
+.suboption {
+  margin-left: 10px;
+}
+
+/* General typography */
+html {
+  font-family: georgia;
+}
+#regionSelector h4 {
+  display: block;
+  font-size: 1.2em;
+  margin: 0 0 0 0;
+  width: auto;
+}
+.instructions {
+  font-style: italic;
+  margin: .25em 0 0 0;
+}
+#selectedRegions ul {
+  border: 3px dashed #999;
+  margin-left: -1em;
+  padding: .75em 1em;
+}
+#hover {
+  font-family: helvetica, arial, sans-serif;
+  line-height: 1.5em;
+  padding: 1em;
+}
+
+/* Button styling */
+.selector {
+  display: inline-block;
+  padding: 0 2em 0 0;
+  vertical-align: top;
+  list-style-type: none;
+}
+
+.selector li {
+  margin: 0 0 .25em -.25em;
+}
+.selector a {
+  border-radius: 3px;
+  display: inline-block;
+  padding: .25em .25em .15em .5em;
+  text-decoration: none;
+}
+#regionSelector a,
+#states a {
+  border: 1px solid #232323;
+  color: #232323;
+}
+#selectedRegions a {
+  background: #232323;
+  color: #ffffff;
+}
+#selectedRegions a:hover {
+  background-color: maroon;
+  border: 1px solid maroon;
+}
+.selector a .ornament {
+  font-weight: bold;
+  padding: .25em
+}
+
+
+/* Helper text */
+label#alphaLabel,
+label#alignLabel {
+  position: relative;
+  border-bottom: 1px dotted black;
+  cursor: help;
+}
+label:hover::after {
+  position: absolute ;
+  background-color: white;
+  top: 1.1em ;
+  left: -2em ;
+  z-index: 1 ;
+  min-width: 10em;
+  padding: 5px;
+  border: 1px solid black;
+}
+label#alphaLabel:hover::after {
+  content: "By default, items are sorted highest to lowest per capita cases";
+}
