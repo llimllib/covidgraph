@@ -17,5 +17,6 @@ publish:
 
 .PHONY: update
 update: process
+	git pull
 	git commit -m "update data $(shell date)" data.json
 	make publish
