@@ -1,5 +1,5 @@
 .PHONY: process
-process: dl
+process: pull dl
 	python etl.py
 
 .PHONY: dl
@@ -15,8 +15,11 @@ publish:
 	git push -f -u origin gh-pages
 	git checkout master
 
+.PHONY: pull
+pull:
+	git pull
+
 .PHONY: update
 update: process
-	git pull
 	git commit -m "update data $(shell date)" data.json
 	make publish
