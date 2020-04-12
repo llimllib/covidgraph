@@ -672,7 +672,7 @@ function loadState() {
     activeRegions = state.regions;
     activeColors = d3.schemeCategory10.slice(0, activeRegions.length);
     inactiveColors = d3.schemeCategory10.slice(activeRegions.length);
-    $("#plotType").checked = state.plotType;
+    $("#plotType").value = state.plotType;
     $("#logscale").checked = state.logscale;
     $("#alignBaseline").checked = state.alignBaseline;
     $("#difference").checked = state.difference;
