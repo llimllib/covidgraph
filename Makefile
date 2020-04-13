@@ -1,6 +1,6 @@
 .PHONY: process
 process: pull dl
-	python etl.py
+	./etl.py
 
 .PHONY: dl
 dl:
