@@ -5,6 +5,6 @@ other, and to nations, so I built it.
 
 ## Contributors
 
-[https://github.com/sudo-bmitch](@sudo-bmitch)
-[https://github.com/goldenmeanie](@goldenmeanie)
-[https://github.com/shines](@shines)
+* [https://github.com/sudo-bmitch](@sudo-bmitch)
+* [https://github.com/goldenmeanie](@goldenmeanie)
+* [https://github.com/shines](@shines)
